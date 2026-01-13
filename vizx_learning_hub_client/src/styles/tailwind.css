@@ -1,0 +1,344 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Background & Foreground */
+    --background: var(--color-background);
+    --foreground: var(--color-foreground);
+    
+    /* Core colors */
+    --color-background: #ffffff;
+    --color-foreground: #000000;
+
+    --color-card: #ffffff;
+    --color-card-foreground: #000000;
+
+    --color-popover: #ffffff;
+    --color-popover-foreground: #000000;
+
+    --color-border: #e5e7eb;
+    --color-input: #f9fafb;
+    --color-ring: #f97316;
+
+    --color-primary: #f97316;
+    --color-primary-foreground: #ffffff;
+
+    --color-secondary: #111827;
+    --color-secondary-foreground: #ffffff;
+
+    --color-muted: #f3f4f6;
+    --color-muted-foreground: #6b7280;
+
+    --color-accent: #fef3c7;
+    --color-accent-foreground: #92400e;
+
+    --color-success: #16a34a;
+    --color-warning: #f59e0b;
+    --color-error: #dc2626;
+
+    --radius: 0.75rem;
+  }
+
+  .dark {
+    /* Background & Foreground */
+    --background: var(--color-background);
+    --foreground: var(--color-foreground);
+    
+    /* Core colors */
+    --color-background: #000000;
+    --color-foreground: #ffffff;
+
+    --color-card: #111827;
+    --color-card-foreground: #ffffff;
+
+    --color-popover: #111827;
+    --color-popover-foreground: #ffffff;
+
+    --color-border: #1f2937;
+    --color-input: #1f2937;
+    --color-ring: #fb923c;
+
+    --color-primary: #fb923c;
+    --color-primary-foreground: #000000;
+
+    --color-secondary: #e5e7eb;
+    --color-secondary-foreground: #000000;
+
+    --color-muted: #1f2937;
+    --color-muted-foreground: #9ca3af;
+
+    --color-accent: #78350f;
+    --color-accent-foreground: #fde68a;
+
+    --color-success: #22c55e;
+    --color-warning: #fbbf24;
+    --color-error: #ef4444;
+  }
+
+  /* Force transition on theme change */
+  * {
+    @apply border-border transition-colors duration-300;
+  }
+
+  /* Ensure smooth theme transitions */
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-family: 'Inter', 'Poppins', sans-serif;
+    font-feature-settings: "rlig" 1, "calt" 1;
+    transition: background-color 0.5s ease, color 0.5s ease;
+  }
+
+  /* HTML element should have proper classes */
+  html {
+    @apply h-full;
+  }
+  
+  html.light {
+    color-scheme: light;
+  }
+  
+  html.dark {
+    color-scheme: dark;
+  }
+
+  /* Selection color matches theme */
+  ::selection {
+    background-color: var(--color-primary);
+    color: var(--color-primary-foreground);
+  }
+
+  /* Scrollbar styling */
+  ::-webkit-scrollbar {
+    width: 10px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: var(--color-muted);
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: var(--color-primary);
+    border-radius: 5px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--color-ring);
+  }
+}
+
+@layer components {
+  .font-inter {
+    font-family: 'Inter', sans-serif;
+  }
+
+  .font-poppins {
+    font-family: 'Poppins', sans-serif;
+  }
+
+  .btn-primary {
+    @apply rounded-xl px-4 py-2 font-medium transition-all duration-300;
+    background-color: var(--color-primary);
+    color: var(--color-primary-foreground);
+  }
+
+  .btn-primary:hover {
+    @apply shadow-lg transform -translate-y-0.5;
+    filter: brightness(1.1);
+  }
+
+  /* Card component */
+  .card {
+    @apply rounded-xl border p-6 transition-all duration-300;
+    background-color: var(--color-card);
+    color: var(--color-card-foreground);
+    border-color: var(--color-border);
+  }
+
+  .card:hover {
+    @apply shadow-lg;
+    border-color: var(--color-primary);
+  }
+
+  /* Glass effect */
+  .glass-card {
+    @apply backdrop-blur-lg border border-white/10 bg-white/5 dark:bg-black/5;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+  }
+
+  /* Navbar specific */
+  .nav-link {
+    @apply relative transition-colors duration-200;
+  }
+
+  .nav-link::after {
+    content: '';
+    @apply absolute bottom-0 left-0 w-0 h-0.5 transition-all duration-300;
+    background-color: var(--color-primary);
+  }
+
+  .nav-link:hover::after {
+    @apply w-full;
+  }
+
+  /* Theme toggle button styles */
+  .theme-toggle-btn {
+    @apply rounded-full p-2 transition-all duration-300;
+    background-color: var(--color-muted);
+    color: var(--color-muted-foreground);
+  }
+
+  .theme-toggle-btn:hover {
+    background-color: var(--color-primary);
+    color: var(--color-primary-foreground);
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+
+  /* Smooth transitions */
+  .transition-theme {
+    transition: background-color 0.5s cubic-bezier(0.4, 0, 0.2, 1), 
+                color 0.5s cubic-bezier(0.4, 0, 0.2, 1),
+                border-color 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  /* Gradient backgrounds */
+  .bg-gradient-primary {
+    background: linear-gradient(135deg, var(--color-primary), var(--color-ring));
+  }
+
+  .bg-gradient-dark {
+    background: linear-gradient(135deg, var(--color-background), var(--color-card));
+  }
+
+  /* Animation utilities */
+  .hover-lift {
+    @apply transition-transform duration-300;
+  }
+
+  .hover-lift:hover {
+    @apply transform -translate-y-1;
+  }
+
+  .hover-scale {
+    @apply transition-transform duration-300;
+  }
+
+  .hover-scale:hover {
+    @apply transform scale-105;
+  }
+
+  /* Focus styles */
+  .focus-ring {
+    @apply focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-background;
+    ring-color: var(--color-ring);
+  }
+
+  /* Hide scrollbar but keep functionality */
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Typography utilities */
+  .text-gradient {
+    background: linear-gradient(135deg, var(--color-primary), var(--color-accent-foreground));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  /* Border gradient */
+  .border-gradient {
+    border: double 2px transparent;
+    border-radius: var(--radius);
+    background-image: linear-gradient(var(--color-background), var(--color-background)), 
+                      linear-gradient(135deg, var(--color-primary), var(--color-ring));
+    background-origin: border-box;
+    background-clip: padding-box, border-box;
+  }
+}
+
+/* Ensure Tailwind utilities can use custom properties */
+@layer base {
+  .bg-background {
+    background-color: var(--background);
+  }
+  
+  .text-foreground {
+    color: var(--foreground);
+  }
+  
+  .bg-card {
+    background-color: var(--color-card);
+  }
+  
+  .text-card-foreground {
+    color: var(--color-card-foreground);
+  }
+  
+  .bg-popover {
+    background-color: var(--color-popover);
+  }
+  
+  .text-popover-foreground {
+    color: var(--color-popover-foreground);
+  }
+  
+  .border-border {
+    border-color: var(--color-border);
+  }
+  
+  .bg-input {
+    background-color: var(--color-input);
+  }
+  
+  .ring-ring {
+    --tw-ring-color: var(--color-ring);
+  }
+  
+  .bg-primary {
+    background-color: var(--color-primary);
+  }
+  
+  .text-primary-foreground {
+    color: var(--color-primary-foreground);
+  }
+  
+  .bg-secondary {
+    background-color: var(--color-secondary);
+  }
+  
+  .text-secondary-foreground {
+    color: var(--color-secondary-foreground);
+  }
+  
+  .bg-muted {
+    background-color: var(--color-muted);
+  }
+  
+  .text-muted-foreground {
+    color: var(--color-muted-foreground);
+  }
+  
+  .bg-accent {
+    background-color: var(--color-accent);
+  }
+  
+  .text-accent-foreground {
+    color: var(--color-accent-foreground);
+  }
+}
