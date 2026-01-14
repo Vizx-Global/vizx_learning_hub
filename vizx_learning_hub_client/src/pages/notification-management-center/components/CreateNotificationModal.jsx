@@ -3,7 +3,7 @@ import Icon from '../../../components/AppIcon';
 import Button from '../../../components/ui/Button';
 import Input from '../../../components/ui/Input';
 import Select from '../../../components/ui/Select';
-import Textarea from '../../../components/ui/Textarea';
+import Textarea from '../../../components/ui/TextArea';
 
 const CreateNotificationModal = ({ isOpen, onClose, onSubmit }) => {
   const [formData, setFormData] = useState({
@@ -45,13 +45,13 @@ const CreateNotificationModal = ({ isOpen, onClose, onSubmit }) => {
             </button>
           </div>
         </div>
-        
+
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
           <Input
             label="Notification Title"
             placeholder="Enter notification title..."
             value={formData.title}
-            onChange={(val) => setFormData({...formData, title: val})}
+            onChange={(val) => setFormData({ ...formData, title: val })}
             className="w-full"
           />
 
@@ -59,7 +59,7 @@ const CreateNotificationModal = ({ isOpen, onClose, onSubmit }) => {
             label="Message"
             placeholder="Enter your notification message..."
             value={formData.message}
-            onChange={(val) => setFormData({...formData, message: val})}
+            onChange={(val) => setFormData({ ...formData, message: val })}
             rows={6}
             className="w-full"
           />
@@ -74,7 +74,7 @@ const CreateNotificationModal = ({ isOpen, onClose, onSubmit }) => {
                 { value: 'sms', label: 'SMS' }
               ]}
               value={formData.type}
-              onChange={(val) => setFormData({...formData, type: val})}
+              onChange={(val) => setFormData({ ...formData, type: val })}
             />
 
             <Select
@@ -87,7 +87,7 @@ const CreateNotificationModal = ({ isOpen, onClose, onSubmit }) => {
                 { value: 'active', label: 'Active Learners' }
               ]}
               value={formData.audience}
-              onChange={(val) => setFormData({...formData, audience: val})}
+              onChange={(val) => setFormData({ ...formData, audience: val })}
             />
           </div>
 
@@ -96,14 +96,14 @@ const CreateNotificationModal = ({ isOpen, onClose, onSubmit }) => {
               label="Scheduled Date"
               type="date"
               value={formData.scheduledDate}
-              onChange={(val) => setFormData({...formData, scheduledDate: val})}
+              onChange={(val) => setFormData({ ...formData, scheduledDate: val })}
             />
 
             <Input
               label="Scheduled Time"
               type="time"
               value={formData.scheduledTime}
-              onChange={(val) => setFormData({...formData, scheduledTime: val})}
+              onChange={(val) => setFormData({ ...formData, scheduledTime: val })}
             />
           </div>
 
@@ -113,7 +113,7 @@ const CreateNotificationModal = ({ isOpen, onClose, onSubmit }) => {
               <div>
                 <div className="font-semibold text-foreground mb-1">AI Suggestion</div>
                 <p className="text-sm text-muted-foreground">
-                  Based on user engagement patterns, sending this notification between 9-11 AM 
+                  Based on user engagement patterns, sending this notification between 9-11 AM
                   on weekdays yields 28% higher open rates.
                 </p>
               </div>

@@ -33,7 +33,7 @@ export class AuthService {
     const existingAdmin = await prisma.user.findFirst({
       where: { role: UserRole.ADMIN }
     });
-    
+
     if (existingAdmin) {
       throw new Error('System already has an administrator. Please contact the existing admin for access.');
     }
@@ -132,10 +132,108 @@ export class AuthService {
       },
     };
   }
-  
+
+  static async register(userData: any): Promise<AuthResponse> {
+    const existingUser = await UserRepository.findByEmail(userData.email);
+    if (existingUser) {
+      throw new Error('User with this email already exists');
+    }
+
+    if (userData.employeeId) {
+      const existingEmployee = await UserRepository.findByEmployeeId(userData.employeeId);
+      if (existingEmployee) {
+        throw new Error('Employee ID already exists');
+      }
+    }
+
+    const hashedPassword = await BcryptUtil.hashPassword(userData.password);
+
+    const user = await prisma.user.create({
+      data: {
+        ...userData,
+        password: hashedPassword,
+        role: UserRole.EMPLOYEE,
+        status: UserStatus.ACTIVE,
+        emailVerified: false,
+        mustChangePassword: false,
+        createdBy: null,
+      },
+      select: {
+        id: true,
+        email: true,
+        firstName: true,
+        lastName: true,
+        employeeId: true,
+        phone: true,
+        avatar: true,
+        department: true,
+        jobTitle: true,
+        role: true,
+        status: true,
+        emailVerified: true,
+        mustChangePassword: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+    });
+
+    // Generate tokens
+    const tokenPayload: TokenPayload = {
+      userId: user.id,
+      email: user.email,
+      role: user.role,
+      employeeId: user.employeeId || undefined,
+    };
+
+    const accessToken = JWTUtil.generateAccessToken(tokenPayload);
+    const refreshToken = JWTUtil.generateRefreshToken(tokenPayload);
+
+    await this.storeRefreshToken(user.id, refreshToken);
+
+    await EmailService.sendWelcomeEmail(
+      user.email,
+      user.firstName,
+      userData.password,
+      UserRole.EMPLOYEE
+    );
+
+    await prisma.auditLog.create({
+      data: {
+        userId: user.id,
+        action: 'user.registered',
+        entity: 'User',
+        entityId: user.id,
+        newValue: { ...user, password: '[HIDDEN]' },
+        ipAddress: '127.0.0.1',
+        userAgent: 'User Registration',
+      },
+    });
+
+    return {
+      user: {
+        id: user.id,
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        employeeId: user.employeeId || undefined,
+        role: user.role,
+        status: user.status,
+        department: user.department || undefined,
+        jobTitle: user.jobTitle || undefined,
+        mustChangePassword: user.mustChangePassword,
+        emailVerified: user.emailVerified,
+        avatar: user.avatar || undefined,
+      },
+      tokens: {
+        accessToken,
+        refreshToken,
+      },
+    };
+  }
+
   static async login(email: string, password: string): Promise<AuthResponse> {
     const user = await UserRepository.findByEmail(email);
-    
+
     if (!user) {
       throw new Error('Invalid email or password');
     }
@@ -169,9 +267,9 @@ export class AuthService {
         role: user.role,
         employeeId: user.employeeId || undefined,
       };
-      
+
       const tempToken = JWTUtil.generateAccessToken(tempTokenPayload, '1h'); // 1 hour expiry
-      
+
       throw new Error('Password change required. Please change your password.', {
         cause: {
           requiresPasswordChange: true,
@@ -182,7 +280,7 @@ export class AuthService {
     }
 
     // Update last login
-    await UserRepository.update(user.id, { 
+    await UserRepository.update(user.id, {
       lastLoginAt: new Date(),
       lastActiveDate: new Date(),
     });
@@ -259,7 +357,7 @@ export class AuthService {
         password: hashedPassword,
         status,
         mustChangePassword: true,
-        emailVerified: userData.role !== UserRole.MANAGER, 
+        emailVerified: userData.role !== UserRole.MANAGER,
         createdBy: adminId,
       },
       select: {
@@ -318,7 +416,7 @@ export class AuthService {
 
     return {
       ...user,
-      temporaryPassword: tempPassword, 
+      temporaryPassword: tempPassword,
     };
   }
   static async createEmployeeByManager(userData: any, managerId: string): Promise<any> {
@@ -418,7 +516,7 @@ export class AuthService {
   }
 
   // ==================== VERIFICATION SYSTEM ====================
-  
+
   /**
    * Generate and send verification code to manager
    */
@@ -501,7 +599,7 @@ export class AuthService {
         where: { userId },
         data: { attempts: verification.attempts + 1 },
       });
-      
+
       const attemptsLeft = 5 - (verification.attempts + 1);
       throw new Error(`Invalid verification code. ${attemptsLeft} attempts remaining.`);
     }
@@ -550,7 +648,7 @@ export class AuthService {
    */
   static async resendVerificationCode(userId: string): Promise<void> {
     await this.sendVerificationCode(userId);
-    
+
     // Log the action
     await prisma.activity.create({
       data: {
@@ -568,12 +666,12 @@ export class AuthService {
     const verification = await prisma.emailVerification.findUnique({
       where: { userId },
     });
-    
+
     return verification?.code || 'N/A';
   }
 
   // ==================== PASSWORD MANAGEMENT ====================
-  
+
   /**
    * Change password (for logged-in users)
    */
@@ -770,7 +868,7 @@ export class AuthService {
   }
 
   // ==================== PROFILE MANAGEMENT ====================
-  
+
   /**
    * Update user profile
    */
@@ -788,7 +886,7 @@ export class AuthService {
     };
 
     const roleAllowedFields = allowedFields[user.role as UserRole] || [];
-    
+
     // Filter update data
     const filteredData = Object.keys(updateData)
       .filter(key => roleAllowedFields.includes(key))
@@ -848,7 +946,7 @@ export class AuthService {
 
     // Admin can update all fields except password
     const allowedFields = ['firstName', 'lastName', 'phone', 'department', 'jobTitle', 'avatar', 'role', 'status', 'managerId'];
-    
+
     // Filter update data
     const filteredData = Object.keys(updateData)
       .filter(key => allowedFields.includes(key))
@@ -900,7 +998,7 @@ export class AuthService {
   }
 
   // ==================== TOKEN MANAGEMENT ====================
-  
+
   static async refreshTokens(refreshToken: string): Promise<{ accessToken: string; refreshToken: string }> {
     try {
       const decoded = JWTUtil.verifyRefreshToken(refreshToken);
@@ -985,7 +1083,7 @@ export class AuthService {
   }
 
   // ==================== UTILITY METHODS ====================
-  
+
   /**
    * Get user's subordinates (for managers and admins)
    */

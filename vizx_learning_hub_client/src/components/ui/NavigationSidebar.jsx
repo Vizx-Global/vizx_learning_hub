@@ -139,7 +139,7 @@ const NavigationSidebar = ({ isCollapsed = false }) => {
   // Get user display info
   const getUserDisplayInfo = () => {
     if (!user) return { name: 'Loading...', points: 0, streak: 0 };
-    
+
     return {
       name: `${user.firstName} ${user.lastName}`,
       points: user.totalPoints || 0,
@@ -181,12 +181,12 @@ const NavigationSidebar = ({ isCollapsed = false }) => {
     <>
       {/* Mobile Overlay */}
       {isMobileOpen && (
-        <div 
+        <div
           className="fixed inset-0 bg-black bg-opacity-50 z-40 md:hidden"
           onClick={() => setIsMobileOpen(false)}
         />
       )}
-      
+
       {/* Mobile Toggle Button */}
       <button
         onClick={() => setIsMobileOpen(!isMobileOpen)}
@@ -194,7 +194,7 @@ const NavigationSidebar = ({ isCollapsed = false }) => {
       >
         <Icon name="Menu" size={24} />
       </button>
-      
+
       {/* Sidebar */}
       <aside className={`
         fixed left-0 top-0 h-full bg-card border-r border-border z-50
@@ -278,9 +278,9 @@ const NavigationSidebar = ({ isCollapsed = false }) => {
                           }
                         `}
                       >
-                        <Icon 
-                          name={item.icon} 
-                          size={20} 
+                        <Icon
+                          name={item.icon}
+                          size={20}
                           className={`
                             ${isActive(item.path) ? 'text-primary-foreground' : 'text-current'}
                           `}
@@ -320,7 +320,7 @@ const NavigationSidebar = ({ isCollapsed = false }) => {
                 )}
               </div>
             </div>
-            
+
             {/* Logout Button */}
             <button
               onClick={handleLogout}
@@ -339,11 +339,11 @@ const NavigationSidebar = ({ isCollapsed = false }) => {
           </div>
         </div>
       </aside>
-      
+
       {/* Mobile Bottom Tab Bar */}
       <div className="fixed bottom-0 left-0 right-0 bg-card border-t border-border z-40 md:hidden">
         <div className="flex items-center justify-around py-2">
-          {filteredNavigation.slice(0, 4).map((section) => 
+          {filteredNavigation.slice(0, 4).map((section) =>
             section.items.map((item) => (
               <button
                 key={item.path}
@@ -352,7 +352,7 @@ const NavigationSidebar = ({ isCollapsed = false }) => {
                   flex flex-col items-center gap-1 px-3 py-2 rounded-lg
                   transition-colors duration-200
                   ${isActive(item.path)
-                    ? 'text-primary' :'text-muted-foreground'
+                    ? 'text-primary' : 'text-muted-foreground'
                   }
                 `}
               >

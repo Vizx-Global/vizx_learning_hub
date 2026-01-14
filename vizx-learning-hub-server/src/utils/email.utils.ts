@@ -78,13 +78,13 @@ export class EmailService {
             };
 
             const info = await this.transporter.sendMail(mailOptions);
-            
+
             console.log(`✅ Email sent successfully to ${options.to}`);
             console.log(`📧 Message ID: ${info.messageId}`);
-            
+
             // Log email details (without sensitive information)
             this.logEmailSent(options.to, options.subject);
-            
+
         } catch (error: any) {
             console.error('❌ Failed to send email:', {
                 to: options.to,
@@ -92,7 +92,7 @@ export class EmailService {
                 error: error.message,
                 code: error.code,
             });
-            
+
             // Re-throw with more context
             throw new Error(`Failed to send email to ${options.to}: ${error.message}`);
         }
@@ -101,10 +101,10 @@ export class EmailService {
     private static logEmailSent(to: string, subject: string): void {
         const timestamp = new Date().toISOString();
         const logMessage = `[${timestamp}] 📧 Email sent - To: ${to} | Subject: ${subject}`;
-        
+
         // Log to console
         console.log(logMessage);
-        
+
         // You could also log to a file or database here
         // For example:
         // this.logToFile(logMessage);
@@ -112,17 +112,17 @@ export class EmailService {
 
     // Welcome Email (for all new users)
     static async sendWelcomeEmail(
-        email: string, 
-        name: string, 
+        email: string,
+        name: string,
         password: string,
         role?: string
     ): Promise<void> {
-        const subject = role === 'MANAGER' 
+        const subject = role === 'MANAGER'
             ? '👨‍💼 Welcome Manager - Your Vizx Academy Account'
             : '🎓 Welcome to Vizx Academy - Your Account Details';
-        
+
         const html = getWelcomeEmailTemplate(name, email, password);
-        
+
         await this.sendEmail({
             to: email,
             subject,
@@ -139,7 +139,7 @@ export class EmailService {
         verificationCode: string
     ): Promise<void> {
         const html = getManagerWelcomeEmailTemplate(name, email, password, verificationCode);
-        
+
         await this.sendEmail({
             to: email,
             subject: '👨‍💼 Manager Account Created - Verify Your Email',
@@ -155,7 +155,7 @@ export class EmailService {
         code: string
     ): Promise<void> {
         const html = getVerificationEmailTemplate(name, code);
-        
+
         await this.sendEmail({
             to: email,
             subject: '🔐 Verify Your Email - Vizx Academy',
@@ -171,7 +171,7 @@ export class EmailService {
         resetToken: string
     ): Promise<void> {
         const html = getPasswordResetEmailTemplate(name, resetToken);
-        
+
         await this.sendEmail({
             to: email,
             subject: '🔑 Reset Your Password - Vizx Academy',
@@ -188,19 +188,58 @@ export class EmailService {
         details: string
     ): Promise<void> {
         const html = getAccountUpdateEmailTemplate(name, updateType, details);
-        
+
         const subjectMap = {
             'password_changed': '🔐 Password Updated Successfully',
             'profile_updated': '👤 Profile Information Updated',
             'role_changed': '🔄 Account Role Updated',
             'status_changed': '📊 Account Status Updated'
         };
-        
+
         await this.sendEmail({
             to: email,
             subject: subjectMap[updateType],
             html,
             text: this.generateAccountUpdateTextVersion(name, updateType, details),
+        });
+    }
+
+    // Admin Notification Email
+    static async sendAdminNotification(
+        subject: string,
+        message: string,
+        data?: any
+    ): Promise<void> {
+        const adminEmail = process.env.ADMIN_EMAIL || process.env.SMTP_USER;
+
+        if (!adminEmail) {
+            console.warn('⚠️ No admin email configured, skipping admin notification');
+            return;
+        }
+
+        const html = `
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 5px;">
+                <h2 style="color: #333;">${subject}</h2>
+                <p style="color: #555; font-size: 16px; line-height: 1.5;">${message}</p>
+                
+                ${data ? `
+                <div style="background-color: #f5f5f5; padding: 15px; border-radius: 5px; margin-top: 20px;">
+                    <h3 style="margin-top: 0; color: #444; font-size: 14px;">Additional Details:</h3>
+                    <pre style="background-color: #eee; padding: 10px; border-radius: 3px; overflow-x: auto; font-size: 12px;">${JSON.stringify(data, null, 2)}</pre>
+                </div>
+                ` : ''}
+                
+                <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee; font-size: 12px; color: #999;">
+                    <p>This is an automated system notification.</p>
+                </div>
+            </div>
+        `;
+
+        await this.sendEmail({
+            to: adminEmail,
+            subject: `[System Notification] ${subject}`,
+            html,
+            text: `${subject}\n\n${message}\n\n${data ? JSON.stringify(data, null, 2) : ''}`,
         });
     }
 
@@ -213,10 +252,10 @@ export class EmailService {
     ): Promise<void> {
         // Send emails in batches to avoid rate limiting
         const batchSize = 50;
-        
+
         for (let i = 0; i < recipients.length; i += batchSize) {
             const batch = recipients.slice(i, i + batchSize);
-            
+
             await Promise.all(
                 batch.map(recipient =>
                     this.sendEmail({
@@ -227,9 +266,9 @@ export class EmailService {
                     })
                 )
             );
-            
+
             console.log(`✅ Sent batch ${Math.floor(i / batchSize) + 1} of ${Math.ceil(recipients.length / batchSize)}`);
-            
+
             // Add delay between batches to prevent rate limiting
             if (i + batchSize < recipients.length) {
                 await new Promise(resolve => setTimeout(resolve, 2000));
@@ -356,7 +395,7 @@ This is an automated email. Please do not reply to this message.
 
     private static generatePasswordResetTextVersion(name: string, resetToken: string): string {
         const resetUrl = `${config.app.clientUrl}/reset-password?token=${resetToken}`;
-        
+
         return `
 Reset Your Password - Vizx Academy
 
@@ -410,15 +449,14 @@ Update Details:
 ${details}
 
 What this means for you:
-${
-    updateType === 'password_changed' ? 
-    'Your password has been successfully updated. If you did not make this change, please contact our support team immediately.' :
-    updateType === 'profile_updated' ?
-    'Your profile information has been updated. You can review your profile at any time in your account settings.' :
-    updateType === 'role_changed' ?
-    'Your account role has been updated. This may affect the features and permissions available to you.' :
-    'Your account status has been updated. This may affect your access to the platform.'
-}
+${updateType === 'password_changed' ?
+                'Your password has been successfully updated. If you did not make this change, please contact our support team immediately.' :
+                updateType === 'profile_updated' ?
+                    'Your profile information has been updated. You can review your profile at any time in your account settings.' :
+                    updateType === 'role_changed' ?
+                        'Your account role has been updated. This may affect the features and permissions available to you.' :
+                        'Your account status has been updated. This may affect your access to the platform.'
+            }
 
 Security Reminder:
 If you did not authorize this change or notice any suspicious activity, please contact our security team immediately at security@vizxacademy.com

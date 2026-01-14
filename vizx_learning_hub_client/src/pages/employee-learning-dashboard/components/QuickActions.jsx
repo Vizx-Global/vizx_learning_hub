@@ -81,13 +81,13 @@ const QuickActions = ({ userRole = 'employee' }) => {
 
   const getAvailableActions = () => {
     let actions = [...quickActions];
-    
+
     if (userRole === 'admin') {
       actions = [...actions, ...adminActions, ...managerActions];
     } else if (userRole === 'manager') {
       actions = [...actions, ...managerActions];
     }
-    
+
     return actions?.filter(action => !action?.roles || action?.roles?.includes(userRole));
   };
 
@@ -149,7 +149,7 @@ const QuickActions = ({ userRole = 'employee' }) => {
                   </span>
                 )}
               </div>
-              
+
               <div>
                 <h4 className="font-semibold text-sm mb-1">{action?.title}</h4>
                 <p className="text-xs opacity-80 line-clamp-2">{action?.description}</p>
@@ -242,8 +242,8 @@ const QuickActions = ({ userRole = 'employee' }) => {
                 </p>
               </div>
             </div>
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               size="sm"
               onClick={() => setNotifications(0)}
             >
@@ -266,8 +266,8 @@ const QuickActions = ({ userRole = 'employee' }) => {
               You're on a 7-day learning streak. Complete one module today to continue.
             </p>
           </div>
-          <Button 
-            variant="outline" 
+          <Button
+            variant="outline"
             size="sm"
             iconName="Play"
             iconPosition="left"

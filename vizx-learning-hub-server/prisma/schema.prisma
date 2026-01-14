@@ -136,6 +136,15 @@ enum ActivityType {
   ACCOUNT_VERIFIED // Added for verification activity
   PROFILE_UPDATED  // Added for profile updates
   PASSWORD_CHANGED // Added for password changes
+  USER_LOGIN       // Added for login activity
+  USER_LOGOUT      // Added for logout activity
+  VERIFICATION_SENT
+  VERIFICATION_RESENT
+  EMAIL_VERIFIED
+  PASSWORD_CHANGED_FORCED
+  PASSWORD_RESET_BY_ADMIN
+  PASSWORD_RESET_REQUESTED
+  USER_DEACTIVATED
 }
 
 enum ContentType {

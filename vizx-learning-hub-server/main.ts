@@ -14,6 +14,7 @@ import moduleRoutes from './src/router/module.routes';
 import { PrismaClient } from '@prisma/client';
 import enrollmentRoutes from './src/router/enrollment.routes';
 import moduleProgressRoutes from './src/router/module-progress.routes';
+import verificationRoutes from './src/router/verification.routes';
 
 dotenv.config();
 
@@ -62,7 +63,7 @@ const ensureUploadDirectory = () => {
       fs.mkdirSync(config.storage.basePath, { recursive: true });
       console.log(`Created upload directory: ${config.storage.basePath}`);
     }
-    
+
     const subdirectories = [
       'modules',
       'modules/thumbnails',
@@ -100,7 +101,6 @@ app.use('/uploads', express.static(config.storage.basePath, {
     const ext = path.extname(filePath);
     const mimeTypes: Record<string, string> = {
       '.jpg': 'image/jpeg',
-      '.jpg': 'image/jpeg',
       '.jpeg': 'image/jpeg',
       '.png': 'image/png',
       '.gif': 'image/gif',
@@ -115,11 +115,11 @@ app.use('/uploads', express.static(config.storage.basePath, {
       '.mp3': 'audio/mpeg',
       '.wav': 'audio/wav',
     };
-    
+
     if (mimeTypes[ext]) {
       res.setHeader('Content-Type', mimeTypes[ext]);
     }
-    
+
     res.setHeader('X-Content-Type-Options', 'nosniff');
     res.setHeader('Content-Security-Policy', "default-src 'self'");
 
@@ -132,7 +132,7 @@ app.use('/uploads', express.static(config.storage.basePath, {
 app.get('/health', (req, res) => {
   console.log('Health check called');
   const uploadDirStatus = fs.existsSync(config.storage.basePath) ? 'healthy' : 'missing';
-  
+
   res.json({
     success: true,
     message: 'AI Learning Hub API is running',
@@ -163,9 +163,9 @@ app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/users', userRoutes);
 app.use('/api/v1/learning-paths', learningPathRoutes);
 app.use('/api/v1/modules', moduleRoutes);
-app.use('/api/enrollments', enrollmentRoutes);
-app.use('/api/modules', moduleRoutes);
-app.use('/api/module-progress', moduleProgressRoutes);
+app.use('/api/v1/enrollments', enrollmentRoutes);
+app.use('/api/v1/module-progress', moduleProgressRoutes);
+app.use('/api/v1/verification', verificationRoutes);
 
 app.use((req, res) => {
   console.log('404 - Route not found:', req.method, req.originalUrl);
@@ -177,14 +177,14 @@ app.use((req, res) => {
 
 app.use((error: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
   console.error('Global error handler:', error);
-  
+
   if (error.code && error.code.startsWith('P')) {
     return res.status(400).json({
       success: false,
       message: 'Database error occurred',
     });
   }
-  
+
   if (error.name === 'JsonWebTokenError') {
     return res.status(401).json({
       success: false,
@@ -198,7 +198,7 @@ app.use((error: any, req: express.Request, res: express.Response, next: express.
       message: 'Token expired',
     });
   }
-  
+
   if (error.message && error.message.includes('File')) {
     return res.status(400).json({
       success: false,
@@ -209,7 +209,7 @@ app.use((error: any, req: express.Request, res: express.Response, next: express.
   const statusCode = error.statusCode || 500;
   const message = error.message || 'Internal server error';
 
-  res.status(statusCode).json({
+  return res.status(statusCode).json({
     success: false,
     message,
     ...(config.app.nodeEnv === 'development' && { stack: error.stack }),

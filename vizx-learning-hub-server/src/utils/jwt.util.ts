@@ -1,4 +1,5 @@
 import jwt from 'jsonwebtoken';
+import { v4 as uuidv4 } from 'uuid';
 import { config } from '../config';
 
 export interface TokenPayload {
@@ -12,12 +13,14 @@ export class JWTUtil {
   static generateAccessToken(payload: TokenPayload): string {
     return jwt.sign(payload, config.jwt.accessSecret, {
       expiresIn: config.jwt.accessExpiry,
+      jwtid: uuidv4(),
     });
   }
 
   static generateRefreshToken(payload: TokenPayload): string {
     return jwt.sign(payload, config.jwt.refreshSecret, {
       expiresIn: config.jwt.refreshExpiry,
+      jwtid: uuidv4(),
     });
   }
 

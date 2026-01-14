@@ -23,9 +23,30 @@ const learningPathService = {
 
   // Get learning paths by category (public)
   getLearningPathsByCategory: (category, queryParams = {}) => {
-    return axiosClient.get(`/learning-paths/category/${category}`, { 
-      params: queryParams 
+    return axiosClient.get(`/learning-paths/category/${category}`, {
+      params: queryParams
     });
+  },
+
+  // Admin/Manager/Creator routes
+  createLearningPath: (data) => {
+    return axiosClient.post('/learning-paths', data);
+  },
+
+  updateLearningPath: (id, data) => {
+    return axiosClient.put(`/learning-paths/${id}`, data);
+  },
+
+  deleteLearningPath: (id) => {
+    return axiosClient.delete(`/learning-paths/${id}`);
+  },
+
+  publishLearningPath: (id) => {
+    return axiosClient.patch(`/learning-paths/${id}/publish`);
+  },
+
+  archiveLearningPath: (id) => {
+    return axiosClient.patch(`/learning-paths/${id}/archive`);
   }
 };
 

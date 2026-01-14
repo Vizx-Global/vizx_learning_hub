@@ -99,11 +99,11 @@ const CreateUserModal = ({ isOpen, onClose, onSuccess }) => {
   };
 
   // Filter job titles based on selected department
-  const filteredJobTitles = formData.department 
-    ? jobTitles.filter(title => 
-        title.toLowerCase().includes(formData.department.toLowerCase()) ||
-        isCommonJobTitle(title)
-      )
+  const filteredJobTitles = formData.department
+    ? jobTitles.filter(title =>
+      title.toLowerCase().includes(formData.department.toLowerCase()) ||
+      isCommonJobTitle(title)
+    )
     : jobTitles;
 
   // Initialize departments and job titles when modal opens
@@ -115,7 +115,7 @@ const CreateUserModal = ({ isOpen, onClose, onSuccess }) => {
 
   const initializeDepartmentsAndJobTitles = async () => {
     setLoadingData(true);
-    
+
     try {
       // Since the departments and job titles endpoints don't exist,
       // we'll use the default lists but try to fetch existing users
@@ -123,33 +123,33 @@ const CreateUserModal = ({ isOpen, onClose, onSuccess }) => {
       try {
         const usersResponse = await axiosClient.get('/users/all');
         console.log('Users response for data extraction:', usersResponse.data);
-        
+
         if (usersResponse.data?.data) {
-          const users = Array.isArray(usersResponse.data.data) 
-            ? usersResponse.data.data 
+          const users = Array.isArray(usersResponse.data.data)
+            ? usersResponse.data.data
             : usersResponse.data.data.users || [];
-          
+
           // Extract unique departments from existing users
           const userDepartments = [...new Set(users
             .map(user => user.department)
             .filter(dept => dept && dept.trim())
           )].sort();
-          
+
           // Extract unique job titles from existing users
           const userJobTitles = [...new Set(users
             .map(user => user.jobTitle)
             .filter(title => title && title.trim())
           )].sort();
-          
+
           // Combine user data with defaults, prioritizing user data
           const combinedDepartments = [...userDepartments, ...defaultDepartments]
             .filter((dept, index, array) => array.indexOf(dept) === index)
             .sort();
-            
+
           const combinedJobTitles = [...userJobTitles, ...defaultJobTitles]
             .filter((title, index, array) => array.indexOf(title) === index)
             .sort();
-          
+
           setDepartments(combinedDepartments);
           setJobTitles(combinedJobTitles);
         } else {
@@ -174,12 +174,12 @@ const CreateUserModal = ({ isOpen, onClose, onSuccess }) => {
 
   const handleInputChange = (field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }));
-    
+
     // Clear error for this field when user starts typing
     if (errors[field]) {
       setErrors(prev => ({ ...prev, [field]: '' }));
     }
-    
+
     // If department changes, reset job title
     if (field === 'department') {
       setFormData(prev => ({ ...prev, jobTitle: '' }));
@@ -252,12 +252,15 @@ const CreateUserModal = ({ isOpen, onClose, onSuccess }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    console.log('handleSubmit called');
 
     if (!validateStep2()) {
+      console.log('Validation failed', errors);
       return;
     }
 
     setIsSubmitting(true);
+    console.log('Submitting form data', formData);
 
     try {
       // Prepare the request body according to your API specification
@@ -267,7 +270,7 @@ const CreateUserModal = ({ isOpen, onClose, onSuccess }) => {
         firstName: formData.firstName,
         lastName: formData.lastName,
         employeeId: formData.employeeId || generateEmployeeId(),
-        phone: formData.phone || undefined, 
+        phone: formData.phone || undefined,
         department: formData.department,
         jobTitle: formData.jobTitle,
         role: formData.role
@@ -277,7 +280,7 @@ const CreateUserModal = ({ isOpen, onClose, onSuccess }) => {
 
       // Use the correct endpoint for user creation
       const response = await axiosClient.post('/auth/users', userData);
-      
+
       console.log('User creation response:', response.data);
 
       if (response.data.success || response.status === 201) {
@@ -288,7 +291,7 @@ const CreateUserModal = ({ isOpen, onClose, onSuccess }) => {
 
         // Show success message
         console.log('User created successfully');
-        
+
         // Reset form and close modal
         handleClose();
       } else {
@@ -296,9 +299,10 @@ const CreateUserModal = ({ isOpen, onClose, onSuccess }) => {
       }
     } catch (error) {
       console.error('Error creating user:', error);
-      
+      console.error('Error response:', error.response);
+
       let errorMessage = 'Failed to create user. Please try again.';
-      
+
       if (error.response?.status === 400) {
         errorMessage = error.response?.data?.message || 'Invalid user data. Please check the form.';
       } else if (error.response?.status === 409) {
@@ -308,7 +312,7 @@ const CreateUserModal = ({ isOpen, onClose, onSuccess }) => {
       } else if (error.message) {
         errorMessage = error.message;
       }
-      
+
       setErrors(prev => ({ ...prev, submit: errorMessage }));
     } finally {
       setIsSubmitting(false);
@@ -339,21 +343,21 @@ const CreateUserModal = ({ isOpen, onClose, onSuccess }) => {
     const length = 12;
     const charset = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*';
     let password = '';
-    
+
     // Ensure at least one of each required character type
     password += 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'[Math.floor(Math.random() * 26)];
     password += 'abcdefghijklmnopqrstuvwxyz'[Math.floor(Math.random() * 26)];
     password += '0123456789'[Math.floor(Math.random() * 10)];
     password += '!@#$%^&*'[Math.floor(Math.random() * 8)];
-    
+
     // Fill the rest randomly
     for (let i = password.length; i < length; i++) {
       password += charset[Math.floor(Math.random() * charset.length)];
     }
-    
+
     // Shuffle the password
     password = password.split('').sort(() => Math.random() - 0.5).join('');
-    
+
     handleInputChange('password', password);
     handleInputChange('confirmPassword', password);
   };
@@ -393,12 +397,10 @@ const CreateUserModal = ({ isOpen, onClose, onSuccess }) => {
         {/* Progress Bar */}
         <div className="px-6 pt-4">
           <div className="flex items-center gap-2 mb-6">
-            <div className={`flex-1 h-2 rounded-full transition-colors ${
-              step >= 1 ? 'bg-primary' : 'bg-muted'
-            }`} />
-            <div className={`flex-1 h-2 rounded-full transition-colors ${
-              step >= 2 ? 'bg-primary' : 'bg-muted'
-            }`} />
+            <div className={`flex-1 h-2 rounded-full transition-colors ${step >= 1 ? 'bg-primary' : 'bg-muted'
+              }`} />
+            <div className={`flex-1 h-2 rounded-full transition-colors ${step >= 2 ? 'bg-primary' : 'bg-muted'
+              }`} />
           </div>
         </div>
 
@@ -426,9 +428,8 @@ const CreateUserModal = ({ isOpen, onClose, onSuccess }) => {
                     type="text"
                     value={formData.firstName}
                     onChange={(e) => handleInputChange('firstName', e.target.value)}
-                    className={`w-full px-4 py-2 bg-background border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground ${
-                      errors.firstName ? 'border-destructive' : 'border-border'
-                    }`}
+                    className={`w-full px-4 py-2 bg-background border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground ${errors.firstName ? 'border-destructive' : 'border-border'
+                      }`}
                     placeholder="John"
                     disabled={isSubmitting}
                   />
@@ -448,9 +449,8 @@ const CreateUserModal = ({ isOpen, onClose, onSuccess }) => {
                     type="text"
                     value={formData.lastName}
                     onChange={(e) => handleInputChange('lastName', e.target.value)}
-                    className={`w-full px-4 py-2 bg-background border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground ${
-                      errors.lastName ? 'border-destructive' : 'border-border'
-                    }`}
+                    className={`w-full px-4 py-2 bg-background border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground ${errors.lastName ? 'border-destructive' : 'border-border'
+                      }`}
                     placeholder="Doe"
                     disabled={isSubmitting}
                   />
@@ -472,9 +472,8 @@ const CreateUserModal = ({ isOpen, onClose, onSuccess }) => {
                   type="email"
                   value={formData.email}
                   onChange={(e) => handleInputChange('email', e.target.value)}
-                  className={`w-full px-4 py-2 bg-background border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground ${
-                    errors.email ? 'border-destructive' : 'border-border'
-                  }`}
+                  className={`w-full px-4 py-2 bg-background border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground ${errors.email ? 'border-destructive' : 'border-border'
+                    }`}
                   placeholder="john.doe@company.com"
                   disabled={isSubmitting}
                 />
@@ -536,9 +535,8 @@ const CreateUserModal = ({ isOpen, onClose, onSuccess }) => {
                   <select
                     value={formData.department}
                     onChange={(e) => handleInputChange('department', e.target.value)}
-                    className={`w-full px-4 py-2 bg-background border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground ${
-                      errors.department ? 'border-destructive' : 'border-border'
-                    }`}
+                    className={`w-full px-4 py-2 bg-background border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground ${errors.department ? 'border-destructive' : 'border-border'
+                      }`}
                     disabled={isSubmitting || loadingData}
                   >
                     <option value="">Select department</option>
@@ -563,9 +561,8 @@ const CreateUserModal = ({ isOpen, onClose, onSuccess }) => {
                   <select
                     value={formData.jobTitle}
                     onChange={(e) => handleInputChange('jobTitle', e.target.value)}
-                    className={`w-full px-4 py-2 bg-background border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground ${
-                      errors.jobTitle ? 'border-destructive' : 'border-border'
-                    }`}
+                    className={`w-full px-4 py-2 bg-background border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground ${errors.jobTitle ? 'border-destructive' : 'border-border'
+                      }`}
                     disabled={isSubmitting || loadingData || !formData.department}
                   >
                     <option value="">Select job title</option>
@@ -595,20 +592,18 @@ const CreateUserModal = ({ isOpen, onClose, onSuccess }) => {
                       key={role.value}
                       type="button"
                       onClick={() => handleInputChange('role', role.value)}
-                      className={`w-full p-4 rounded-lg border-2 transition-all text-left ${
-                        formData.role === role.value
+                      className={`w-full p-4 rounded-lg border-2 transition-all text-left ${formData.role === role.value
                           ? 'border-primary bg-primary/5'
                           : 'border-border hover:border-primary/50'
-                      }`}
+                        }`}
                       disabled={isSubmitting}
                     >
                       <div className="flex items-start justify-between">
                         <div className="flex items-start gap-3">
-                          <div className={`w-5 h-5 rounded-full border-2 mt-0.5 flex items-center justify-center ${
-                            formData.role === role.value
+                          <div className={`w-5 h-5 rounded-full border-2 mt-0.5 flex items-center justify-center ${formData.role === role.value
                               ? 'border-primary bg-primary'
                               : 'border-border'
-                          }`}>
+                            }`}>
                             {formData.role === role.value && (
                               <Icon name="Check" size={12} className="text-white" />
                             )}
@@ -621,8 +616,8 @@ const CreateUserModal = ({ isOpen, onClose, onSuccess }) => {
                         <Icon
                           name={
                             role.value === 'ADMIN' ? 'Key' :
-                            role.value === 'MANAGER' ? 'Users' :
-                            'User'
+                              role.value === 'MANAGER' ? 'Users' :
+                                'User'
                           }
                           size={20}
                           className={formData.role === role.value ? 'text-primary' : 'text-muted-foreground'}
@@ -656,9 +651,8 @@ const CreateUserModal = ({ isOpen, onClose, onSuccess }) => {
                     type="text"
                     value={formData.password}
                     onChange={(e) => handleInputChange('password', e.target.value)}
-                    className={`w-full px-4 py-2 pr-24 bg-background border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground ${
-                      errors.password ? 'border-destructive' : 'border-border'
-                    }`}
+                    className={`w-full px-4 py-2 pr-24 bg-background border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground ${errors.password ? 'border-destructive' : 'border-border'
+                      }`}
                     placeholder="Enter password"
                     disabled={isSubmitting}
                   />
@@ -691,9 +685,8 @@ const CreateUserModal = ({ isOpen, onClose, onSuccess }) => {
                   type="text"
                   value={formData.confirmPassword}
                   onChange={(e) => handleInputChange('confirmPassword', e.target.value)}
-                  className={`w-full px-4 py-2 bg-background border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground ${
-                    errors.confirmPassword ? 'border-destructive' : 'border-border'
-                  }`}
+                  className={`w-full px-4 py-2 bg-background border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground ${errors.confirmPassword ? 'border-destructive' : 'border-border'
+                    }`}
                   placeholder="Confirm password"
                   disabled={isSubmitting}
                 />
@@ -711,22 +704,21 @@ const CreateUserModal = ({ isOpen, onClose, onSuccess }) => {
                   <div className="text-sm font-medium text-foreground mb-2">Password Strength</div>
                   <div className="flex gap-1">
                     {[1, 2, 3, 4].map((level) => {
-                      const strength = 
+                      const strength =
                         formData.password.length >= 12 ? 4 :
-                        formData.password.length >= 10 ? 3 :
-                        formData.password.length >= 8 ? 2 : 1;
-                      
+                          formData.password.length >= 10 ? 3 :
+                            formData.password.length >= 8 ? 2 : 1;
+
                       return (
                         <div
                           key={level}
-                          className={`flex-1 h-2 rounded-full transition-colors ${
-                            level <= strength
+                          className={`flex-1 h-2 rounded-full transition-colors ${level <= strength
                               ? strength >= 4 ? 'bg-success' :
                                 strength >= 3 ? 'bg-primary' :
-                                strength >= 2 ? 'bg-warning' :
-                                'bg-destructive'
+                                  strength >= 2 ? 'bg-warning' :
+                                    'bg-destructive'
                               : 'bg-muted'
-                          }`}
+                            }`}
                         />
                       );
                     })}
@@ -746,14 +738,12 @@ const CreateUserModal = ({ isOpen, onClose, onSuccess }) => {
                   <button
                     type="button"
                     onClick={() => handleInputChange('sendWelcomeEmail', !formData.sendWelcomeEmail)}
-                    className={`relative w-12 h-6 rounded-full transition-colors ${
-                      formData.sendWelcomeEmail ? 'bg-success' : 'bg-muted'
-                    }`}
+                    className={`relative w-12 h-6 rounded-full transition-colors ${formData.sendWelcomeEmail ? 'bg-success' : 'bg-muted'
+                      }`}
                     disabled={isSubmitting}
                   >
-                    <div className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow-md transition-transform ${
-                      formData.sendWelcomeEmail ? 'left-6' : 'left-0.5'
-                    }`} />
+                    <div className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow-md transition-transform ${formData.sendWelcomeEmail ? 'left-6' : 'left-0.5'
+                      }`} />
                   </button>
                 </div>
 
@@ -767,14 +757,12 @@ const CreateUserModal = ({ isOpen, onClose, onSuccess }) => {
                   <button
                     type="button"
                     onClick={() => handleInputChange('requirePasswordChange', !formData.requirePasswordChange)}
-                    className={`relative w-12 h-6 rounded-full transition-colors ${
-                      formData.requirePasswordChange ? 'bg-success' : 'bg-muted'
-                    }`}
+                    className={`relative w-12 h-6 rounded-full transition-colors ${formData.requirePasswordChange ? 'bg-success' : 'bg-muted'
+                      }`}
                     disabled={isSubmitting}
                   >
-                    <div className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow-md transition-transform ${
-                      formData.requirePasswordChange ? 'left-6' : 'left-0.5'
-                    }`} />
+                    <div className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow-md transition-transform ${formData.requirePasswordChange ? 'left-6' : 'left-0.5'
+                      }`} />
                   </button>
                 </div>
               </div>
