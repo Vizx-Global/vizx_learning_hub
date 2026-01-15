@@ -2,6 +2,7 @@ import React from "react";
 import { BrowserRouter, Routes as RouterRoutes, Route } from "react-router-dom";
 import ScrollToTop from "./components/ScrollToTop";
 import ErrorBoundary from "./components/ErrorBoundary";
+import ProtectedRoute from "./components/ProtectedRoute";
 import NotFound from "./pages/NotFound";
 import AdminDashboard from './pages/Administrator/admin-learning-dashboard/index';
 import LearningPathManagement from './pages/Administrator/admin-learning-path-management';
@@ -15,6 +16,8 @@ import NotificationManagementCenter from "./pages/Administrator/admin-notificati
 import RegistrationForm from "./pages/Authentication/SignUp";
 import LoginForm from "./pages/Authentication/SignIn";
 import LandingPage from "./pages/landing-page/index";
+import EmployeeLayout from "./layouts/EmployeeLayout";
+import EmployeeDashboard from "./pages/employee-learning-dashboard/Dashboard/index";
 
 import { ThemeProvider } from "./components/ThemeProvider";
 
@@ -42,6 +45,17 @@ const Routes = () => {
             <Route path="/cohort-performance-analytics" element={<PerformanceAnalytics />} />
             <Route path="/administrative-system-configuration" element={<AdminSystemConfiguration />} />
             <Route path="/notification-management-center" element={<NotificationManagementCenter />} />
+
+
+            {/* Employee Routes */}
+            <Route path="/employee-dashboard" element={
+              <ProtectedRoute requiredRole="EMPLOYEE">
+                <EmployeeLayout />
+              </ProtectedRoute>
+            }>
+              <Route index element={<EmployeeDashboard />} />
+            </Route>
+
             <Route path="*" element={<NotFound />} />
           </RouterRoutes>
         </ErrorBoundary>

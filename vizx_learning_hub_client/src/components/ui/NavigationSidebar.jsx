@@ -17,7 +17,7 @@ const NavigationSidebar = ({ isCollapsed = false }) => {
           label: 'Dashboard',
           path: '/employee-learning-dashboard',
           icon: 'LayoutDashboard',
-          roles: ['EMPLOYEE', 'ADMIN', 'MANAGER']
+          roles: ['ADMIN', 'MANAGER']
         }
       ]
     },
@@ -39,7 +39,7 @@ const NavigationSidebar = ({ isCollapsed = false }) => {
           label: 'Learning Games',
           path: '/interactive-learning-games-hub',
           icon: 'Gamepad2',
-          roles: ['EMPLOYEE', 'ADMIN', 'MANAGER']
+          roles: ['ADMIN', 'MANAGER']
         }
       ]
     },
@@ -50,7 +50,7 @@ const NavigationSidebar = ({ isCollapsed = false }) => {
           label: 'Leaderboards',
           path: '/gamification-leaderboards',
           icon: 'Trophy',
-          roles: ['EMPLOYEE', 'ADMIN', 'MANAGER']
+          roles: ['ADMIN', 'MANAGER']
         }
       ]
     },
@@ -61,7 +61,7 @@ const NavigationSidebar = ({ isCollapsed = false }) => {
           label: 'Learning Paths',
           path: '/learning-path-management',
           icon: 'BookOpen',
-          roles: ['EMPLOYEE', 'ADMIN', 'MANAGER']
+          roles: ['ADMIN', 'MANAGER']
         }
       ]
     },

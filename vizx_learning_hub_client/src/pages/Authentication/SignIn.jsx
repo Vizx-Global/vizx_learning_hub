@@ -19,7 +19,7 @@ const SignInForm = () => {
   const [errors, setErrors] = useState({});
   const [showPassword, setShowPassword] = useState(false);
   const [showSuccessLoading, setShowSuccessLoading] = useState(false);
-  
+
   const { login } = useAuth();
   const navigate = useNavigate();
 
@@ -38,7 +38,7 @@ const SignInForm = () => {
 
     if (!formData.email.trim()) newErrors.email = 'Email is required';
     else if (!/\S+@\S+\.\S+/.test(formData.email)) newErrors.email = 'Email is invalid';
-    
+
     if (!formData.password) newErrors.password = 'Password is required';
 
     setErrors(newErrors);
@@ -54,22 +54,27 @@ const SignInForm = () => {
 
     try {
       const result = await login(formData.email, formData.password);
-      
+
       if (result.success) {
         console.log('Login successful:', result.user);
         setShowSuccessLoading(true);
+        // Determine redirect path based on role
+        const targetPath = result.user.role === 'EMPLOYEE'
+          ? '/employee-dashboard'
+          : '/admin-learning-dashboard';
+
         setTimeout(() => {
-          navigate('/admin-learning-dashboard', { 
+          navigate(targetPath, {
             replace: true,
-            state: { 
+            state: {
               message: 'Welcome back! You have successfully signed in.',
               type: 'success'
             }
           });
-        }, 5000);
+        }, 1000);
       } else {
         console.error('Login failed:', result.error);
-        
+
         if (result.error.toLowerCase().includes('email') || result.error.includes('user not found')) {
           setErrors({ email: result.error });
         } else if (result.error.toLowerCase().includes('password') || result.error.includes('invalid credentials')) {
@@ -84,8 +89,8 @@ const SignInForm = () => {
       }
     } catch (error) {
       console.error('Sign in error:', error);
-      setErrors({ 
-        submit: 'An unexpected error occurred. Please try again.' 
+      setErrors({
+        submit: 'An unexpected error occurred. Please try again.'
       });
     } finally {
       setIsLoading(false);
@@ -100,10 +105,10 @@ const SignInForm = () => {
     return (
       <div className="fixed inset-0 bg-background flex items-center justify-center z-50">
         <div className="text-center">
-          <OrbitProgress 
-            color="var(--color-primary)" 
-            size="medium" 
-            text="" 
+          <OrbitProgress
+            color="var(--color-primary)"
+            size="medium"
+            text=""
             textColor=""
           />
           <p className="text-foreground text-xl mt-6 font-semibold">
@@ -126,12 +131,12 @@ const SignInForm = () => {
     <div className="min-h-screen bg-background flex items-center justify-center p-4 transition-theme">
       <div className="max-w-6xl w-full grid grid-cols-1 lg:grid-cols-2 bg-card rounded-2xl shadow-2xl overflow-hidden border border-border">
         {/* Left Side - Visuals */}
-        <div 
+        <div
           className="hidden lg:flex bg-cover bg-center bg-no-repeat p-12 flex-col justify-between relative overflow-hidden"
           style={{ backgroundImage: 'url(https://res.cloudinary.com/dvkt0lsqb/image/upload/v1767740900/front_office_dwxpks.jpg)' }}
         >
           <div className="absolute inset-0 bg-black/60"></div>
-          
+
           <div className="relative z-10 text-center">
             <div className="inline-flex items-center gap-2 bg-white/20 backdrop-blur-sm rounded-full px-4 py-2 mb-8 border border-white/10">
               <div className="w-2 h-2 bg-success rounded-full animate-pulse"></div>
@@ -141,7 +146,7 @@ const SignInForm = () => {
             <h3 className="text-5xl font-bold text-white mb-6 leading-tight">
               Level Up Your Skills
             </h3>
-            
+
             <div className="space-y-4 max-w-sm mx-auto">
               <div className="flex items-center gap-4 p-4 ">
                 <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center">
@@ -206,17 +211,17 @@ const SignInForm = () => {
             <div className="text-center lg:text-left mb-8">
               <div className="flex items-center justify-center lg:justify-start gap-3 mb-6">
                 <Link to="/" className="flex-shrink-0">
-                  <Image 
-                    src="https://res.cloudinary.com/dvkt0lsqb/image/upload/v1767738897/vizx_academy-updated_kpwfzj.png" 
+                  <Image
+                    src="https://res.cloudinary.com/dvkt0lsqb/image/upload/v1767738897/vizx_academy-updated_kpwfzj.png"
                     alt="AI Learning Hub"
                     className="h-24 w-full rounded-xl object-cover cursor-pointer hover:opacity-80 transition-opacity"
                     fallback={<div className="h-16 w-16 bg-primary rounded-xl flex items-center justify-center shadow-lg">
                     </div>}
                   />
                 </Link>
-          
+
               </div>
-              
+
               <h2 className="text-3xl lg:text-4xl font-bold text-foreground mb-3">
                 Welcome Back
               </h2>
@@ -305,8 +310,8 @@ const SignInForm = () => {
                   onChange={(checked) => handleChange('rememberMe', checked)}
                   disabled={isLoading}
                 />
-                <Link 
-                  to="/forgot-password" 
+                <Link
+                  to="/forgot-password"
                   className="text-sm text-primary hover:underline font-medium"
                 >
                   Forgot password?
@@ -327,8 +332,8 @@ const SignInForm = () => {
               <div className="text-center">
                 <p className="text-muted-foreground">
                   Don't have an account?{' '}
-                  <Link 
-                    to="/register" 
+                  <Link
+                    to="/register"
                     className="text-primary font-semibold hover:underline transition-colors"
                   >
                     Create one here
