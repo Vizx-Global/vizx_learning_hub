@@ -12,7 +12,7 @@ import {
 } from "lucide-react";
 import Button from "../../../components/ui/Button";
 import { useNavigate } from "react-router-dom";
-import learningPathService from "../../employee-learning-dashboard/services/learningPathService";
+import learningPathService from "../../Administrator/admin-learning-path-management/services/learningPathService";
 
 const FeaturedLearningPaths = () => {
   const [learningPaths, setLearningPaths] = useState([]);

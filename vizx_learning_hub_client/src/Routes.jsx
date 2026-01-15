@@ -3,20 +3,19 @@ import { BrowserRouter, Routes as RouterRoutes, Route } from "react-router-dom";
 import ScrollToTop from "./components/ScrollToTop";
 import ErrorBoundary from "./components/ErrorBoundary";
 import NotFound from "./pages/NotFound";
-import EmployeeLearningDashboard from './pages/employee-learning-dashboard/index';
-import LearningPathManagement from './pages/learning-path-management/index';
-import LearningContentSynchronization from './pages/learning-content-synchronization/index';
-import UserProfileManagement from './pages/user-profile-management/index';
-import InteractiveLearningGamesHub from './pages/interactive-learning-games-hub/index';
-import GamificationLeaderboards from './pages/gamification-leaderboards/index';
-import PerformanceAnalytics from './pages/cohort-performance-analytics/index';
-import AdminSystemConfiguration from './pages/administrative-system-configuration/index';
-import NotificationManagementCenter from "./pages/notification-management-center";
+import AdminDashboard from './pages/Administrator/admin-learning-dashboard/index';
+import LearningPathManagement from './pages/Administrator/admin-learning-path-management';
+import LearningContentSynchronization from './pages/Administrator/admin-learning-content-synchronization';
+import UserProfileManagement from './pages/Administrator/admin-user-profile-management';
+import InteractiveLearningGamesHub from './pages/Administrator/admin-interactive-learning-games-hub';
+import GamificationLeaderboards from './pages/Administrator/admin-gamification-leaderboards';
+import PerformanceAnalytics from './pages/Administrator/admin-cohort-performance-analytics';
+import AdminSystemConfiguration from './pages/Administrator/administrative-system-configuration/index';
+import NotificationManagementCenter from "./pages/Administrator/admin-notification-management-center";
 import RegistrationForm from "./pages/Authentication/SignUp";
 import LoginForm from "./pages/Authentication/SignIn";
 import LandingPage from "./pages/landing-page/index";
 
-// Import your ThemeProvider
 import { ThemeProvider } from "./components/ThemeProvider";
 
 const Routes = () => {
@@ -26,11 +25,15 @@ const Routes = () => {
         <ErrorBoundary>
           <ScrollToTop />
           <RouterRoutes>
-            {/* Define your route here */}
+            {/* Landing Page */}
             <Route path="/" element={<LandingPage />} />
+
+            {/*Authentication Pages */}
             <Route path="/register" element={<RegistrationForm />} />
             <Route path="/login" element={<LoginForm />} />
-            <Route path="/employee-learning-dashboard" element={<EmployeeLearningDashboard />} />
+
+            {/* Admin Dashboard Routes */}
+            <Route path="/admin-learning-dashboard" element={<AdminDashboard />} />
             <Route path="/learning-path-management" element={<LearningPathManagement />} />
             <Route path="/learning-content-synchronization" element={<LearningContentSynchronization />} />
             <Route path="/user-profile-management" element={<UserProfileManagement />} />

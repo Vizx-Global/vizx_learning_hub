@@ -59,7 +59,7 @@ const SignInForm = () => {
         console.log('Login successful:', result.user);
         setShowSuccessLoading(true);
         setTimeout(() => {
-          navigate('/employee-learning-dashboard', { 
+          navigate('/admin-learning-dashboard', { 
             replace: true,
             state: { 
               message: 'Welcome back! You have successfully signed in.',
