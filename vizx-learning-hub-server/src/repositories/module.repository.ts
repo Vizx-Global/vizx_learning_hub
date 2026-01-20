@@ -69,18 +69,35 @@ export class ModuleRepository {
     return await prisma.module.findFirst({ where: { learningPathId, slug } });
   }
 
-  static async findAll(filters: ModuleFilters = {}, pagination: PaginationParams = { page: this.DEFAULT_PAGE, limit: this.DEFAULT_LIMIT, sortBy: this.DEFAULT_SORT, sortOrder: this.DEFAULT_ORDER }): Promise<ModulesResponse> {
-    const limit = Math.min(Math.max(1, pagination.limit), this.MAX_LIMIT);
-    const page = Math.max(1, pagination.page);
-    const skip = (page - 1) * limit;
+  static async findAll(filters: ModuleFilters = {}, pagination: Partial<PaginationParams> = {}): Promise<ModulesResponse> {
+    const {
+      page = this.DEFAULT_PAGE,
+      limit = this.DEFAULT_LIMIT,
+      sortBy = this.DEFAULT_SORT,
+      sortOrder = this.DEFAULT_ORDER
+    } = pagination;
+
+    // Ensure numeric values in case of string input
+    const parsedLimit = Number(limit) || this.DEFAULT_LIMIT;
+    const parsedPage = Number(page) || this.DEFAULT_PAGE;
+
+    const safeLimit = Math.min(Math.max(1, parsedLimit), this.MAX_LIMIT);
+    const safePage = Math.max(1, parsedPage);
+    const skip = (safePage - 1) * safeLimit;
     const where = this.buildWhereClause(filters);
 
     const [modules, total] = await Promise.all([
-      prisma.module.findMany({ where, skip, take: limit, orderBy: { [pagination.sortBy]: pagination.sortOrder }, include: { learningPath: { select: { id: true, title: true, slug: true } } } }),
+      prisma.module.findMany({
+        where,
+        skip,
+        take: safeLimit,
+        orderBy: { [sortBy]: sortOrder },
+        include: { learningPath: { select: { id: true, title: true, slug: true } } }
+      }),
       prisma.module.count({ where })
     ]);
 
-    return { modules, total, page, limit, totalPages: Math.ceil(total / limit) };
+    return { modules, total, page: safePage, limit: safeLimit, totalPages: Math.ceil(total / safeLimit) };
   }
 
   static async update(id: string, data: Prisma.ModuleUpdateInput): Promise<ModuleWithLearningPath> {
@@ -155,11 +172,11 @@ export class ModuleRepository {
   private static buildWhereClause(f: ModuleFilters): Prisma.ModuleWhereInput {
     const w: Prisma.ModuleWhereInput = {};
     if (f.learningPathId) w.learningPathId = f.learningPathId;
-    if (f.category) w.category = { contains: f.category, mode: 'insensitive' };
+    if (f.category) w.category = { contains: f.category };
     if (f.difficulty) w.difficulty = f.difficulty;
     if (f.isActive !== undefined) w.isActive = f.isActive;
     if (f.contentType) w.contentType = f.contentType;
-    if (f.search) w.OR = [{ title: { contains: f.search, mode: 'insensitive' } }, { description: { contains: f.search, mode: 'insensitive' } }];
+    if (f.search) w.OR = [{ title: { contains: f.search } }, { description: { contains: f.search } }];
     return w;
   }
 

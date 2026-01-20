@@ -26,7 +26,8 @@ import {
   Zap,
   HelpCircle,
   TrendingUp,
-  RotateCcw
+  RotateCcw,
+  Lock
 } from 'lucide-react';
 import quizService from '../../../../api/quizService';
 import moduleProgressService from '../../../../api/moduleProgressService';
@@ -506,73 +507,87 @@ const SideVideoPlayer = ({ module, allModules = [], onClose, onSelectModule }) =
             </div>
 
             <div className="flex-1 overflow-y-auto no-scrollbar py-4 px-2 space-y-1">
-               {allModules.map((m, idx) => {
-                 const isActive = m.id === module.id;
-                 const summaryItem = enrollmentSummary.find(s => s.moduleId === m.id);
-                 const isCompleted = summaryItem?.status === 'COMPLETED';
-                 return (
-                   <button
-                    key={m.id}
-                    onClick={() => onSelectModule(m)}
-                    className={cn(
-                      "w-full text-left p-4 rounded-2xl transition-all group flex gap-4",
-                      isActive 
-                        ? "bg-primary text-white shadow-xl shadow-primary/20" 
-                        : "hover:bg-muted"
-                    )}
-                   >
-                     <div className={cn(
-                       "w-10 h-10 rounded-xl flex items-center justify-center font-black text-xs shrink-0 transition-all shadow-sm",
-                       isActive ? "bg-white/20 text-white" : "bg-card border border-border group-hover:border-primary/50"
-                     )}>
-                        {idx + 1}
-                     </div>
-                     <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-1">
-                           <span className={cn(
-                             "text-[9px] font-black uppercase tracking-widest",
-                             isActive ? "text-white/70" : "text-primary"
-                           )}>
-                             Module {idx + 1}
-                           </span>
-                           {isCompleted && <CheckCircle2 className="h-3 w-3 text-success" />}
-                        </div>
-                        <h4 className={cn(
-                          "text-xs font-black tracking-tight truncate",
-                          isActive ? "text-white" : "text-foreground"
-                        )}>
-                          {m.title}
-                        </h4>
-                        
-                        {m.contentType === 'QUIZ' && (
-                          <div className="flex items-center gap-1.5 mt-1">
-                            <span className={cn(
-                              "text-[8px] font-black uppercase px-1.5 py-0.5 rounded",
-                              isActive 
-                                ? "bg-white/20 text-white" 
-                                : isCompleted 
-                                  ? "bg-success/10 text-success" 
-                                  : "bg-warning/10 text-warning"
-                            )}>
-                              {isCompleted ? 'Quiz Passed' : summaryItem?.progress?.attempts > 0 ? 'Quiz Failed' : 'Quiz Required'}
-                            </span>
-                          </div>
-                        )}
+                {allModules.map((m, idx) => {
+                  const isActive = m.id === module.id;
+                  const summaryItem = enrollmentSummary.find(s => s.moduleId === m.id);
+                  const isCompleted = summaryItem?.status === 'COMPLETED';
+                  
+                  // Sequential access logic: 
+                  // Locked if (not first module) AND (previous module not completed)
+                  const isLocked = idx > 0 && (() => {
+                    const prevModule = allModules[idx - 1];
+                    const prevSummary = enrollmentSummary.find(s => s.moduleId === prevModule.id);
+                    return prevSummary?.status !== 'COMPLETED';
+                  })();
 
-                        <div className="flex items-center gap-3 mt-1.5">
-                           <div className="flex items-center gap-1 opacity-60">
-                              <Clock className="h-2.5 w-2.5" />
-                              <span className="text-[9px] font-bold">{m.estimatedMinutes}M</span>
+                  return (
+                    <button
+                     key={m.id}
+                     onClick={() => !isLocked && onSelectModule(m)}
+                     disabled={isLocked}
+                     className={cn(
+                       "w-full text-left p-4 rounded-2xl transition-all group flex gap-4",
+                       isActive 
+                         ? "bg-primary text-white shadow-xl shadow-primary/20" 
+                         : isLocked
+                           ? "opacity-50 cursor-not-allowed bg-muted/20"
+                           : "hover:bg-muted"
+                     )}
+                    >
+                      <div className={cn(
+                        "w-10 h-10 rounded-xl flex items-center justify-center font-black text-xs shrink-0 transition-all shadow-sm",
+                        isActive ? "bg-white/20 text-white" : "bg-card border border-border group-hover:border-primary/50",
+                        isLocked && "text-muted-foreground"
+                      )}>
+                         {isLocked ? <Lock className="h-4 w-4" /> : idx + 1}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                         <div className="flex items-center gap-2 mb-1">
+                            <span className={cn(
+                              "text-[9px] font-black uppercase tracking-widest",
+                              isActive ? "text-white/70" : isLocked ? "text-muted-foreground" : "text-primary"
+                            )}>
+                              Module {idx + 1}
+                            </span>
+                            {isCompleted && <CheckCircle2 className="h-3 w-3 text-success" />}
+                            {isLocked && <Lock className="h-2.5 w-2.5 text-muted-foreground/50" />}
+                         </div>
+                         <h4 className={cn(
+                           "text-xs font-black tracking-tight truncate",
+                           isActive ? "text-white" : isLocked ? "text-muted-foreground" : "text-foreground"
+                         )}>
+                           {m.title}
+                         </h4>
+                         
+                         {!isLocked && m.contentType === 'QUIZ' && (
+                           <div className="flex items-center gap-1.5 mt-1">
+                             <span className={cn(
+                               "text-[8px] font-black uppercase px-1.5 py-0.5 rounded",
+                               isActive 
+                                 ? "bg-white/20 text-white" 
+                                 : isCompleted 
+                                   ? "bg-success/10 text-success" 
+                                   : "bg-warning/10 text-warning"
+                             )}>
+                               {isCompleted ? 'Quiz Passed' : summaryItem?.progress?.attempts > 0 ? 'Quiz Failed' : 'Quiz Required'}
+                             </span>
                            </div>
-                           <div className="flex items-center gap-1 opacity-60">
-                              <Award className="h-2.5 w-2.5" />
-                              <span className="text-[9px] font-bold">{m.completionPoints}XP</span>
-                           </div>
-                        </div>
-                     </div>
-                   </button>
-                 );
-               })}
+                         )}
+
+                         <div className="flex items-center gap-3 mt-1.5">
+                            <div className="flex items-center gap-1 opacity-60">
+                               <Clock className="h-2.5 w-2.5" />
+                               <span className="text-[9px] font-bold">{m.estimatedMinutes}M</span>
+                            </div>
+                            <div className="flex items-center gap-1 opacity-60">
+                               <Award className="h-2.5 w-2.5" />
+                               <span className="text-[9px] font-bold">{m.completionPoints}XP</span>
+                            </div>
+                         </div>
+                      </div>
+                    </button>
+                  );
+                })}
             </div>
 
             <div className="p-6 bg-muted/20 border-t border-border">

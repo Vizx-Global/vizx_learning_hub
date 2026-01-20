@@ -48,6 +48,9 @@ export class QuizService {
   }
 
   async submitAttempt(userId: string, quizId: string, enrollmentId: string, answers: any): Promise<QuizAttempt> {
+    if (!userId) throw new ValidationError('User ID is required');
+    if (!enrollmentId) throw new ValidationError('Enrollment ID is required');
+    
     const quiz = await QuizRepository.findById(quizId);
     if (!quiz) throw new NotFoundError('Quiz not found');
 

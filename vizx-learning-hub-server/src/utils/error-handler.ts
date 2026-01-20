@@ -23,6 +23,12 @@ export class ValidationError extends AppError {
   }
 }
 
+export class BadRequestError extends AppError {
+  constructor(message: string = 'Bad request') {
+    super(message, 400);
+  }
+}
+
 export class AuthenticationError extends AppError {
   constructor(message: string = 'Authentication required') {
     super(message, 401);

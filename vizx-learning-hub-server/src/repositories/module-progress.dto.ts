@@ -1,10 +1,15 @@
+import { ProgressStatus } from '@prisma/client';
+
 export interface UpdateModuleProgressDto {
   progress?: number;
   timeSpent?: number;
-  status?: string;
+  status?: ProgressStatus;
   notes?: string;
   bookmarked?: boolean;
   quizScore?: number;
+  lastAccessedAt?: Date;
+  startedAt?: Date;
+  completedAt?: Date;
 }
 
 export interface MarkModuleCompleteDto {

@@ -27,8 +27,8 @@ app.use(cors({ origin: config.app.corsOrigin, credentials: true, methods: ['GET'
 app.use(cookieParser());
 
 const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 100,
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: config.app.nodeEnv === 'development' ? 5000 : 500, // Allow 5000 requests per 15 min in dev, 500 in prod
   message: { success: false, message: 'Too many requests.' },
   skip: (req) => req.path.startsWith('/uploads/')
 });

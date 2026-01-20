@@ -3,7 +3,7 @@ import Icon from '../../../../components/AppIcon';
 import Button from '../../../../components/ui/Button';
 import learningPathService from '../services/learningPathService';
 import moduleService from '../services/moduleService';
-import CreateLearningPath from './CreateModuleModal';
+
 import Swal from 'sweetalert2';
 
 
@@ -316,14 +316,9 @@ const PathCategorySidebar = ({
   const [error, setError] = useState(null);
   const [expandedCategories, setExpandedCategories] = useState({});
   const [moduleData, setModuleData] = useState({});
-  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingPath, setEditingPath] = useState(null);
   const [actionLoading, setActionLoading] = useState({});
-
-  const handleCreatePath = () => {
-    setIsCreateModalOpen(true);
-  };
 
   const handlePathCreated = (newPath) => {
     fetchLearningPaths();
@@ -854,7 +849,7 @@ const PathCategorySidebar = ({
           size={isCollapsed ? "icon" : "sm"}
           iconName="Plus"
           iconPosition={isCollapsed ? undefined : "left"}
-          onClick={handleCreatePath}
+          onClick={onCreatePath}
           fullWidth={!isCollapsed}
         >
           {!isCollapsed && "New Path"}
@@ -981,11 +976,6 @@ const PathCategorySidebar = ({
       )}
       
       {/* Modals */}
-      <CreateLearningPath
-        isOpen={isCreateModalOpen}
-        onClose={() => setIsCreateModalOpen(false)}
-        onSuccess={handlePathCreated}
-      />
       
       <EditLearningPathModal 
         isOpen={isEditModalOpen}

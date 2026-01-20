@@ -937,7 +937,7 @@ const PathStructurePanel = ({
 
   return (
     <>
-      <div className="h-full bg-card rounded-lg border border-border overflow-hidden">
+      <div className="h-full bg-card rounded-lg border border-border overflow-hidden flex flex-col">
         {/* Header */}
         <div className="p-4 border-b border-border bg-muted/30">
           <div className="flex items-center justify-between">
@@ -991,7 +991,7 @@ const PathStructurePanel = ({
                       <div className="flex-1">
                         <div className="flex items-center gap-2 mb-2">
                           <Icon name={getModuleIcon(module.contentType)} size={16} className="text-primary" />
-                          <span className="text-xs font-mono text-muted-foreground">#{module.orderIndex || index + 1}</span>
+                          <span className="text-xs font-mono text-muted-foreground">#{index + 1}</span>
                           <h4 className="font-medium text-foreground">{module.title || 'Untitled Module'}</h4>
                         </div>
 

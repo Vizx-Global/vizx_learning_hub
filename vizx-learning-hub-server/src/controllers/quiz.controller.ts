@@ -45,7 +45,7 @@ export class QuizController {
     try {
       const { quizId } = req.params;
       const { enrollmentId, answers } = req.body;
-      const userId = (req as any).user.id;
+      const userId = (req as any).user.userId;
 
       if (!quizId) {
         throw new ValidationError('Quiz ID is required');

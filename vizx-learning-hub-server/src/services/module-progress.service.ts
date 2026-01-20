@@ -134,7 +134,17 @@ export class ModuleProgressService {
   }
 
   async updateEnrollmentProgress(enrollmentId: string, userId: string) {
-    const moduleProgress = await this.prisma.moduleProgress.findMany({ where: { enrollmentId, userId }, include: { module: { select: { requiresCompletion: true } } } });
+    const enrollment = await this.prisma.enrollment.findUnique({
+      where: { id: enrollmentId },
+      include: { learningPath: true }
+    });
+    if (!enrollment) return null;
+
+    const moduleProgress = await this.prisma.moduleProgress.findMany({ 
+      where: { enrollmentId, userId }, 
+      include: { module: { select: { requiresCompletion: true } } } 
+    });
+    
     if (moduleProgress.length === 0) return null;
 
     const required = moduleProgress.filter(mp => mp.module?.requiresCompletion);
@@ -142,15 +152,47 @@ export class ModuleProgressService {
     if (required.length > 0) percentage = (required.filter(mp => mp.status === ProgressStatus.COMPLETED).length / required.length) * 100;
     else percentage = (moduleProgress.filter(mp => mp.status === ProgressStatus.COMPLETED).length / moduleProgress.length) * 100;
 
-    let status = EnrollmentStatus.ENROLLED;
-    if (percentage > 0 && percentage < 100) status = EnrollmentStatus.IN_PROGRESS;
-    else if (percentage === 100) status = EnrollmentStatus.COMPLETED;
+    let newStatus: EnrollmentStatus = EnrollmentStatus.ENROLLED;
+    if (percentage > 0 && percentage < 100) newStatus = EnrollmentStatus.IN_PROGRESS;
+    else if (percentage === 100) newStatus = EnrollmentStatus.COMPLETED;
+
+    // Award points if path is completed for the first time
+    if (newStatus === EnrollmentStatus.COMPLETED && enrollment.status !== EnrollmentStatus.COMPLETED) {
+      const points = (enrollment.learningPath as any).completionPoints || 500;
+      await this.createPointsTransaction(
+        userId, 
+        points, 
+        'PATH_COMPLETION', 
+        enrollment.learningPathId, 
+        `Completed learning path: ${enrollment.learningPath.title}`
+      );
+
+      await this.prisma.activity.create({
+        data: {
+          userId,
+          type: ActivityType.PATH_COMPLETED,
+          description: `Completed learning path: ${enrollment.learningPath.title}`,
+          metadata: {
+            learningPathId: enrollment.learningPathId,
+            enrollmentId: enrollment.id,
+            pathTitle: enrollment.learningPath.title,
+            pointsEarned: points
+          },
+          pointsEarned: points
+        }
+      });
+    }
 
     return await this.prisma.enrollment.update({
       where: { id: enrollmentId },
       data: {
-        progress: parseFloat(percentage.toFixed(2)), status, lastActivityAt: new Date(),
-        ...(status === EnrollmentStatus.COMPLETED && { completedAt: new Date(), finalScore: parseFloat(percentage.toFixed(2)) })
+        progress: parseFloat(percentage.toFixed(2)), 
+        status: newStatus, 
+        lastActivityAt: new Date(),
+        ...(newStatus === EnrollmentStatus.COMPLETED && { 
+          completedAt: new Date(), 
+          finalScore: parseFloat(percentage.toFixed(2)) 
+        })
       }
     });
   }

@@ -396,6 +396,7 @@ model LearningPath {
   externalUrl           String?            @db.VarChar(500)
   lastSyncedAt          DateTime?
   version               String?            @db.VarChar(20)
+  completionPoints      Int                @default(500)
 
   enrollmentCount       Int                @default(0)
   completionCount       Int                @default(0)
