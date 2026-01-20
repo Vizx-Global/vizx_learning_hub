@@ -19,7 +19,6 @@ export default function index() {
             <GamificationSection/>
         </main>
         <Footer/>
-
     </div>
   )
 }

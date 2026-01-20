@@ -10,9 +10,9 @@ export interface TokenPayload {
 }
 
 export class JWTUtil {
-  static generateAccessToken(payload: TokenPayload): string {
+  static generateAccessToken(payload: TokenPayload, expiresIn?: string): string {
     return jwt.sign(payload, config.jwt.accessSecret, {
-      expiresIn: config.jwt.accessExpiry,
+      expiresIn: expiresIn || config.jwt.accessExpiry,
       jwtid: uuidv4(),
     });
   }

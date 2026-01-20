@@ -1,18 +1,18 @@
 import { Request, Response } from 'express';
 import { AuthService } from '../services/auth.service';
-import { AuthRequest, authenticate } from '../middlewares/auth.middleware';
+import { AuthRequest } from '../middlewares/auth.middleware';
 
 export class AuthController {
   static async register(req: Request, res: Response) {
     try {
       const result = await AuthService.register(req.validatedData || req.body);
 
-      // Set refresh token as httpOnly cookie
       res.cookie('refreshToken', result.tokens.refreshToken, {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
-        sameSite: 'strict',
-        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+        sameSite: 'lax',
+        path: '/',
+        maxAge: 7 * 24 * 60 * 60 * 1000,
       });
 
       res.status(201).json({
@@ -36,12 +36,12 @@ export class AuthController {
       const { email, password } = req.validatedData || req.body;
       const result = await AuthService.login(email, password);
 
-      // Set refresh token as httpOnly cookie
       res.cookie('refreshToken', result.tokens.refreshToken, {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
-        sameSite: 'strict',
-        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+        sameSite: 'lax',
+        path: '/',
+        maxAge: 7 * 24 * 60 * 60 * 1000,
       });
 
       res.json({
@@ -65,7 +65,6 @@ export class AuthController {
       const refreshToken = req.cookies.refreshToken;
       await AuthService.logout(req.user!.userId, refreshToken);
 
-      // Clear refresh token cookie
       res.clearCookie('refreshToken');
 
       res.json({
@@ -93,12 +92,12 @@ export class AuthController {
 
       const tokens = await AuthService.refreshTokens(refreshToken);
 
-      // Set new refresh token as httpOnly cookie
       res.cookie('refreshToken', tokens.refreshToken, {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
-        sameSite: 'strict',
-        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+        sameSite: 'lax',
+        path: '/',
+        maxAge: 7 * 24 * 60 * 60 * 1000,
       });
 
       res.json({

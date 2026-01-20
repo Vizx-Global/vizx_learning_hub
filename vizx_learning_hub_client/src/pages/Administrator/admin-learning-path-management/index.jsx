@@ -14,6 +14,7 @@ import { useLearningPaths } from './hooks/uselearningPath';
 import { useModules } from './hooks/useModules';
 import learningPathService from './services/learningPathService';
 import moduleService from './services/moduleService';
+import CreateLearningPath from './components/CreateLearningPath';
 
 const LearningPathManagement = () => {
   const navigate = useNavigate();
@@ -32,6 +33,7 @@ const LearningPathManagement = () => {
     learningPaths, 
     loading, 
     error,
+    fetchLearningPaths,
     createLearningPath,
     updateLearningPath,
     deleteLearningPath 
@@ -155,23 +157,6 @@ const LearningPathManagement = () => {
       setSelectedPaths([]);
     } catch (error) {
       console.error('Bulk action failed:', error);
-    }
-  };
-
-  const handleCreatePath = async (pathData) => {
-    try {
-      const newPath = {
-        title: pathData.title,
-        description: pathData.description,
-        category: pathData.category,
-        status: 'draft',
-        isActive: true
-      };
-      
-      await createLearningPath(newPath);
-      setShowCreateModal(false);
-    } catch (error) {
-      console.error('Failed to create learning path:', error);
     }
   };
 
@@ -372,88 +357,14 @@ const LearningPathManagement = () => {
       </div>
 
       {/* Create Path Modal */}
-      {showCreateModal && (
-        <CreatePathModal 
-          onClose={() => setShowCreateModal(false)}
-          onCreate={handleCreatePath}
-        />
-      )}
-    </div>
-  );
-};
-
-// Create Path Modal Component
-const CreatePathModal = ({ onClose, onCreate }) => {
-  const [formData, setFormData] = useState({
-    title: '',
-    description: '',
-    category: ''
-  });
-
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    onCreate(formData);
-  };
-
-  return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <div className="bg-card border border-border rounded-lg p-6 max-w-md w-full mx-4">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="font-semibold text-foreground">Create New Learning Path</h3>
-          <Button
-            variant="ghost"
-            size="icon"
-            iconName="X"
-            onClick={onClose}
-          />
-        </div>
-        
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <Input
-            label="Path Title"
-            type="text"
-            placeholder="Enter learning path title"
-            value={formData.title}
-            onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
-            required
-          />
-          <Input
-            label="Description"
-            type="text"
-            placeholder="Brief description of the learning path"
-            value={formData.description}
-            onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-          />
-          <Select
-            label="Category"
-            options={[
-              { value: 'ai-fundamentals', label: 'AI Fundamentals' },
-              { value: 'machine-learning', label: 'Machine Learning' },
-              { value: 'data-science', label: 'Data Science' },
-              { value: 'nlp', label: 'Natural Language Processing' }
-            ]}
-            value={formData.category}
-            onChange={(value) => setFormData(prev => ({ ...prev, category: value }))}
-            placeholder="Select category"
-          />
-          
-          <div className="flex items-center gap-3 justify-end mt-6">
-            <Button
-              variant="outline"
-              type="button"
-              onClick={onClose}
-            >
-              Cancel
-            </Button>
-            <Button
-              variant="default"
-              type="submit"
-            >
-              Create Path
-            </Button>
-          </div>
-        </form>
-      </div>
+      <CreateLearningPath
+        isOpen={showCreateModal}
+        onClose={() => setShowCreateModal(false)}
+        onSuccess={() => {
+          fetchLearningPaths();
+          setShowCreateModal(false);
+        }}
+      />
     </div>
   );
 };

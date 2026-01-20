@@ -2,8 +2,10 @@ import React, { useState, useRef } from 'react';
 import Icon from '../../../../components/AppIcon';
 import Button from '../../../../components/ui/Button';
 import moduleService from '../services/moduleService';
+import quizService from '../../../../api/quizService';
 import { OrbitProgress } from 'react-loading-indicators';
 import Swal from 'sweetalert2';
+import { cn } from '../../../../utils/cn';
 
 // Utility functions
 const formatFileSize = (bytes) => {
@@ -122,7 +124,12 @@ const CreateModuleModal = ({
     
     // Settings
     completionPoints: 100,
-    isActive: true
+    isActive: true,
+    includeQuiz: false,
+    
+    // Quiz Questions
+    quizInstructions: '',
+    questions: []
   });
 
   const [tempInputs, setTempInputs] = useState({
@@ -311,6 +318,24 @@ const CreateModuleModal = ({
             break;
         }
         return true;
+
+      case 'quiz-questions':
+        if (formData.questions.length === 0) {
+          setError('At least one question is required for the quiz');
+          return false;
+        }
+        for (let i = 0; i < formData.questions.length; i++) {
+          const q = formData.questions[i];
+          if (!q.text.trim()) {
+            setError(`Question ${i + 1} text is required`);
+            return false;
+          }
+          if (q.options.some(opt => !opt.trim())) {
+            setError(`All options for question ${i + 1} must be filled`);
+            return false;
+          }
+        }
+        return true;
       
       default:
         return true;
@@ -323,6 +348,7 @@ const CreateModuleModal = ({
     { id: 'content', label: 'Content', icon: 'PlayCircle' },
     { id: 'objectives', label: 'Objectives & Tags', icon: 'Target' },
     { id: 'attachments', label: 'Attachments', icon: 'Paperclip' },
+    ...(formData.includeQuiz || formData.contentType === 'QUIZ' ? [{ id: 'quiz-questions', label: 'Quiz Questions', icon: 'List' }] : []),
     { id: 'settings', label: 'Settings', icon: 'Settings' }
   ];
 
@@ -608,34 +634,9 @@ const CreateModuleModal = ({
       case 'QUIZ':
         return (
           <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-2">
-                Number of Questions
-              </label>
-              <input
-                type="number"
-                name="quizQuestions"
-                value={formData.quizQuestions}
-                onChange={handleInputChange}
-                min="1"
-                placeholder="e.g., 10"
-                className="w-full px-4 py-2 bg-muted border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-              />
-            </div>
-            
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-2">
-                Quiz Instructions
-              </label>
-              <textarea
-                name="content"
-                value={formData.content}
-                onChange={handleInputChange}
-                placeholder="Provide quiz instructions, rules, and any special requirements..."
-                rows={4}
-                className="w-full px-4 py-2 bg-muted border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary resize-none"
-              />
-            </div>
+            <p className="text-sm text-muted-foreground bg-primary/5 p-4 rounded-lg border border-primary/10">
+              Module type is set to <strong>Quiz</strong>. You will be able to add questions and detailed instructions in the <strong>Quiz Questions</strong> step.
+            </p>
           </div>
         );
 
@@ -867,6 +868,22 @@ const CreateModuleModal = ({
         response = await moduleService.createModule(moduleData);
       }
 
+      // If it's a quiz, create the quiz questions
+      if (response && response.data?.data && (contentType === 'QUIZ' || formData.includeQuiz) && formData.questions.length > 0) {
+        console.log('📝 Creating quiz with data:', {
+          moduleId: response.data.data.id,
+          title: response.data.data.title,
+          questionsCount: formData.questions.length
+        });
+        await quizService.createQuiz({
+          moduleId: response.data.data.id,
+          title: response.data.data.title,
+          instructions: formData.quizInstructions,
+          passingScore: 70, // Default or add to UI
+          questions: formData.questions
+        });
+      }
+
       // Success handling
       if (response && response.data) {
         Swal.fire({
@@ -953,7 +970,8 @@ const CreateModuleModal = ({
       tags: [],
       attachments: [],
       completionPoints: 100,
-      isActive: true
+      isActive: true,
+      questions: []
     });
     setTempInputs({
       learningObjective: '',
@@ -1107,6 +1125,34 @@ const CreateModuleModal = ({
                     </select>
                   </div>
 
+                  <div className="pt-1">
+                    <label className={cn(
+                      "flex items-center gap-3 cursor-pointer group p-3 rounded-xl border border-border bg-muted/30 transition-all",
+                      formData.includeQuiz || formData.contentType === 'QUIZ' ? "border-primary/30 bg-primary/5" : "hover:bg-muted",
+                      formData.contentType === 'QUIZ' && "opacity-60 cursor-not-allowed"
+                    )}>
+                      <div className="relative">
+                        <input
+                          type="checkbox"
+                          name="includeQuiz"
+                          className="sr-only peer"
+                          checked={formData.includeQuiz || formData.contentType === 'QUIZ'}
+                          onChange={handleInputChange}
+                          disabled={formData.contentType === 'QUIZ'}
+                        />
+                        <div className="w-10 h-5 bg-muted rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary transition-colors"></div>
+                      </div>
+                      <div className="flex flex-col">
+                        <span className="text-sm font-bold text-foreground group-hover:text-primary transition-colors">
+                          Include Quiz Assessment
+                        </span>
+                        <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-widest leading-none mt-1">
+                          {formData.contentType === 'QUIZ' ? 'Required for Quiz type' : 'Add evaluation after content'}
+                        </span>
+                      </div>
+                    </label>
+                  </div>
+
                   <div>
                     <label className="block text-sm font-medium text-foreground mb-2">
                       Difficulty Level <span className="text-error">*</span>
@@ -1179,9 +1225,141 @@ const CreateModuleModal = ({
 
               {/* Content Type Specific Fields */}
               <div className="border-t border-border pt-4">
-                <h4 className="font-medium text-foreground mb-4">Content Configuration</h4>
+                <div className="flex items-center justify-between mb-4">
+                  <h4 className="font-medium text-foreground">Content Configuration</h4>
+                  {formData.includeQuiz && formData.contentType !== 'QUIZ' && (
+                    <div className="flex items-center gap-2 px-3 py-1.5 bg-primary/10 rounded-full border border-primary/20">
+                      <Icon name="List" size={14} className="text-primary" />
+                      <span className="text-[10px] font-bold text-primary uppercase tracking-wider">
+                        Quiz questions step enabled
+                      </span>
+                    </div>
+                  )}
+                </div>
                 {renderContentTypeSpecificFields()}
               </div>
+            </div>
+          )}
+
+          {/* Quiz Questions Step */}
+          {activeStep === 'quiz-questions' && (
+            <div className="space-y-6">
+              <div className="p-4 bg-primary/5 rounded-xl border border-primary/10 space-y-4">
+                <label className="block text-sm font-bold text-primary uppercase tracking-wider">
+                  Quiz Instructions
+                </label>
+                <textarea
+                  name="quizInstructions"
+                  value={formData.quizInstructions}
+                  onChange={handleInputChange}
+                  placeholder="Provide instructions for the learners before they start the quiz..."
+                  rows={3}
+                  className="w-full px-4 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary resize-none transition-all"
+                />
+              </div>
+
+              <div className="flex items-center justify-between border-t border-border pt-6">
+                <h4 className="font-bold text-foreground flex items-center gap-2">
+                  <Icon name="List" size={20} className="text-primary" />
+                  Questions ({formData.questions.length})
+                </h4>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  iconName="Plus"
+                  className="rounded-xl font-bold"
+                  onClick={() => {
+                    setFormData(prev => ({
+                      ...prev,
+                      questions: [
+                        ...prev.questions,
+                        {
+                          text: '',
+                          type: 'MULTIPLE_CHOICE',
+                          options: ['', '', '', ''],
+                          correctAnswer: 0,
+                          points: 10
+                        }
+                      ]
+                    }));
+                  }}
+                >
+                  Add Question
+                </Button>
+              </div>
+
+              {formData.questions.length === 0 ? (
+                <div className="text-center py-10 bg-muted/30 rounded-lg border border-dashed border-border">
+                  <Icon name="List" size={32} className="mx-auto text-muted-foreground mb-2" />
+                  <p className="text-sm text-muted-foreground">No questions added yet. Click "Add Question" to begin.</p>
+                </div>
+              ) : (
+                <div className="space-y-6">
+                  {formData.questions.map((q, qIndex) => (
+                    <div key={qIndex} className="p-4 bg-muted/30 rounded-lg border border-border relative">
+                      <button
+                        onClick={() => {
+                          setFormData(prev => ({
+                            ...prev,
+                            questions: prev.questions.filter((_, i) => i !== qIndex)
+                          }));
+                        }}
+                        className="absolute top-4 right-4 text-muted-foreground hover:text-error"
+                      >
+                        <Icon name="Trash2" size={16} />
+                      </button>
+
+                      <div className="space-y-4">
+                        <div>
+                          <label className="block text-xs font-semibold text-muted-foreground uppercase mb-1">
+                            Question {qIndex + 1}
+                          </label>
+                          <input
+                            type="text"
+                            value={q.text}
+                            onChange={(e) => {
+                              const newQuestions = [...formData.questions];
+                              newQuestions[qIndex].text = e.target.value;
+                              setFormData(prev => ({ ...prev, questions: newQuestions }));
+                            }}
+                            placeholder="Enter question text"
+                            className="w-full px-4 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+                          />
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          {q.options.map((opt, oIndex) => (
+                            <div key={oIndex} className="flex items-center gap-3">
+                              <input
+                                type="radio"
+                                name={`correct-${qIndex}`}
+                                checked={q.correctAnswer === oIndex}
+                                onChange={() => {
+                                  const newQuestions = [...formData.questions];
+                                  newQuestions[qIndex].correctAnswer = oIndex;
+                                  setFormData(prev => ({ ...prev, questions: newQuestions }));
+                                }}
+                                className="w-4 h-4 text-primary focus:ring-primary"
+                              />
+                              <input
+                                type="text"
+                                value={opt}
+                                onChange={(e) => {
+                                  const newQuestions = [...formData.questions];
+                                  newQuestions[qIndex].options[oIndex] = e.target.value;
+                                  setFormData(prev => ({ ...prev, questions: newQuestions }));
+                                }}
+                                placeholder={`Option ${oIndex + 1}`}
+                                className="flex-1 px-3 py-1.5 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-sm"
+                              />
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
 

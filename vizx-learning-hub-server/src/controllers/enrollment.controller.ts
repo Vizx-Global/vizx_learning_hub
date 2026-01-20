@@ -1,4 +1,4 @@
-import { Request, Response } from 'express';
+import { Response } from 'express';
 import { EnrollmentService } from '../services/enrollment.service';
 import { enrollmentValidators } from '../validator/enrollment.validator';
 import { AuthRequest } from '../middlewares/auth.middleware';
@@ -15,7 +15,6 @@ export class EnrollmentController {
     try {
       const userId = req.user!.userId;
       const data = validateRequest(enrollmentValidators.createEnrollmentSchema, req.body);
-
       const enrollment = await this.enrollmentService.enrollUser(userId, data);
 
       res.status(201).json({
@@ -32,7 +31,6 @@ export class EnrollmentController {
     try {
       const { enrollmentId } = req.params;
       const userId = req.user!.userId;
-
       const enrollment = await this.enrollmentService.getEnrollmentById(enrollmentId, userId);
 
       res.json({
@@ -48,7 +46,6 @@ export class EnrollmentController {
     try {
       const userId = req.user!.userId;
       const query = validateRequest(enrollmentValidators.queryEnrollmentSchema, req.query);
-
       const result = await this.enrollmentService.getUserEnrollments(userId, query);
 
       res.json({
@@ -66,7 +63,6 @@ export class EnrollmentController {
       const { enrollmentId } = req.params;
       const userId = req.user!.userId;
       const data = validateRequest(enrollmentValidators.updateEnrollmentSchema, req.body);
-
       const enrollment = await this.enrollmentService.updateEnrollment(enrollmentId, userId, data);
 
       res.json({
@@ -83,7 +79,6 @@ export class EnrollmentController {
     try {
       const { enrollmentId } = req.params;
       const userId = req.user!.userId;
-
       const enrollment = await this.enrollmentService.dropEnrollment(enrollmentId, userId);
 
       res.json({
@@ -100,7 +95,6 @@ export class EnrollmentController {
     try {
       const { enrollmentId } = req.params;
       const userId = req.user!.userId;
-
       const progress = await this.enrollmentService.getEnrollmentProgress(enrollmentId, userId);
 
       res.json({
@@ -115,7 +109,6 @@ export class EnrollmentController {
   getActiveEnrollmentsCount = async (req: AuthRequest, res: Response) => {
     try {
       const userId = req.user!.userId;
-
       const result = await this.enrollmentService.getActiveEnrollmentsCount(userId);
 
       res.json({
@@ -128,8 +121,6 @@ export class EnrollmentController {
   };
 
   private handleError(error: any, res: Response) {
-    console.error('Enrollment error:', error);
-
     if (error.name === 'ValidationError') {
       return res.status(400).json({
         success: false,

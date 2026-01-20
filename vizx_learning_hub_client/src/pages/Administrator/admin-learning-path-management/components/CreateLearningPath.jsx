@@ -94,6 +94,10 @@ const CreateLearningPath = ({ isOpen, onClose, onSuccess }) => {
       setError('Category is required');
       return false;
     }
+    if (!formData.estimatedHours || parseFloat(formData.estimatedHours) <= 0) {
+      setError('A positive number of estimated hours is required');
+      return false;
+    }
     return true;
   };
 

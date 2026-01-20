@@ -1,13 +1,7 @@
 import React from 'react';
 import { Moon, Sun, Monitor } from 'lucide-react';
 import Button from '../components/ui/Button';
-import { 
-  DropdownMenu, 
-  DropdownMenuContent, 
-  DropdownMenuItem, 
-  DropdownMenuTrigger 
-} from '../components/ui/dropdown-menu';
-import { motion } from 'framer-motion';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../components/ui/dropdown-menu';
 import { useTheme } from '../components/ThemeProvider';
 
 export function ThemeToggle() {

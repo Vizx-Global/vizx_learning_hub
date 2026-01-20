@@ -8,6 +8,8 @@ export interface AuthRequest extends Request {
     role: string;
     employeeId?: string;
   };
+  file?: any;
+  files?: any;
 }
 
 export const authenticate = (req: AuthRequest, res: Response, next: NextFunction) => {

@@ -23,85 +23,26 @@ A modern React-based project utilizing the latest frontend technologies and tool
 
 1. Install dependencies:
    ```bash
-   npm install
-   # or
-   yarn install
-   ```
+   npm install or npm install --legacy-peer-deps
+   
    
 2. Start the development server:
-   ```bash
-   npm start
-   # or
-   yarn start
-   ```
 
-## 📁 Project Structure
+   npm run dev
 
-```
-react_app/
-├── public/             # Static assets
-├── src/
-│   ├── components/     # Reusable UI components
-│   ├── pages/          # Page components
-│   ├── styles/         # Global styles and Tailwind configuration
-│   ├── App.jsx         # Main application component
-│   ├── Routes.jsx      # Application routes
-│   └── index.jsx       # Application entry point
-├── .env                # Environment variables
-├── index.html          # HTML template
-├── package.json        # Project dependencies and scripts
-├── tailwind.config.js  # Tailwind CSS configuration
-└── vite.config.js      # Vite configuration
-```
+   ## Project Flow and overview
+   '''
+   vizx_learning_hub_client is a frontend application for vixens/ vixz employees to manage their learning journey.
+   '''
+   It has a three tier user interface:
+   1. System Administrator
+   2. Departmental Managers
+   3. Empployees
 
-## 🧩 Adding Routes
+   The application has a RBAC architecture: 
+   When the user is signed up, the user is automatically assigned the role of an employee and upon login the user is redirected to the employee dashboard.
 
-To add new routes to the application, update the `Routes.jsx` file:
+   To access the system administrator dashboard, the user must be assigned the role of a system administrator and upon login the user is redirected to the system administrator dashboard.
 
-```jsx
-import { useRoutes } from "react-router-dom";
-import HomePage from "pages/HomePage";
-import AboutPage from "pages/AboutPage";
-
-const ProjectRoutes = () => {
-  let element = useRoutes([
-    { path: "/", element: <HomePage /> },
-    { path: "/about", element: <AboutPage /> },
-    // Add more routes as needed
-  ]);
-
-  return element;
-};
-```
-
-## 🎨 Styling
-
-This project uses Tailwind CSS for styling. The configuration includes:
-
-- Forms plugin for form styling
-- Typography plugin for text styling
-- Aspect ratio plugin for responsive elements
-- Container queries for component-specific responsive design
-- Fluid typography for responsive text
-- Animation utilities
-
-## 📱 Responsive Design
-
-The app is built with responsive design using Tailwind CSS breakpoints.
-
-
-## 📦 Deployment
-
-Build the application for production:
-
-```bash
-npm run build
-```
-
-## 🙏 Acknowledgments
-
-- Built with [Rocket.new](https://rocket.new)
-- Powered by React and Vite
-- Styled with Tailwind CSS
-
-Built with ❤️ on Rocket.new
+   To access the departmental manager dashboard, the user must be assigned the role of a departmental manager and upon login the user is redirected to the departmental manager dashboard.
+   

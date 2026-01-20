@@ -26,7 +26,10 @@ export interface UpdateUserData {
   status?: UserStatus;
   avatar?: string;
   lastLoginAt?: Date;
+  lastActiveDate?: Date;
+  emailVerified?: boolean;
   mustChangePassword?: boolean;
+  passwordChangedAt?: Date;
 }
 
 export interface UserFilters {
@@ -182,17 +185,16 @@ export class UserRepository {
       ...(filters.status && { status: filters.status }),
       ...(filters.department && { 
         department: { 
-          contains: filters.department,
-          mode: 'insensitive' as const
+          contains: filters.department
         } 
       }),
       ...(filters.search && {
         OR: [
-          { firstName: { contains: filters.search, mode: 'insensitive' as const } },
-          { lastName: { contains: filters.search, mode: 'insensitive' as const } },
-          { email: { contains: filters.search, mode: 'insensitive' as const } },
-          { employeeId: { contains: filters.search, mode: 'insensitive' as const } },
-          { phone: { contains: filters.search, mode: 'insensitive' as const } },
+          { firstName: { contains: filters.search } },
+          { lastName: { contains: filters.search } },
+          { email: { contains: filters.search } },
+          { employeeId: { contains: filters.search } },
+          { phone: { contains: filters.search } },
         ],
       }),
     };
@@ -411,8 +413,7 @@ export class UserRepository {
     return prisma.user.findMany({
       where: { 
         department: { 
-          contains: department,
-          mode: 'insensitive' as const
+          contains: department
         } 
       },
       select: {
@@ -458,11 +459,11 @@ export class UserRepository {
     const users = await prisma.user.findMany({
       where: {
         OR: [
-          { firstName: { contains: query, mode: 'insensitive' } },
-          { lastName: { contains: query, mode: 'insensitive' } },
-          { email: { contains: query, mode: 'insensitive' } },
-          { employeeId: { contains: query, mode: 'insensitive' } },
-          { phone: { contains: query, mode: 'insensitive' } },
+          { firstName: { contains: query } },
+          { lastName: { contains: query } },
+          { email: { contains: query } },
+          { employeeId: { contains: query } },
+          { phone: { contains: query } },
         ],
       },
       take: limit,

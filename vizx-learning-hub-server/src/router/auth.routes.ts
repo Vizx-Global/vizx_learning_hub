@@ -11,17 +11,12 @@ import {
 
 const router = Router();
 
-// Public routes
 router.post('/register', validate(registerSchema), AuthController.register);
 router.post('/login', validate(loginSchema), AuthController.login);
 router.post('/refresh-token', AuthController.refreshToken);
-
-// Protected routes
 router.post('/logout', authenticate, AuthController.logout);
 router.get('/profile', authenticate, AuthController.getProfile);
 router.put('/change-password', authenticate, validate(changePasswordSchema), AuthController.changePassword);
-
-// Admin and Manager routes
 router.post('/users', authenticate, authorize('ADMIN', 'MANAGER'), validate(createUserSchema), AuthController.createUser);
 
 export default router;

@@ -1,8 +1,8 @@
-import { Request, Response } from 'express';
+import { Response } from 'express';
 import { LearningPathService } from '../services/learningPath.service';
 import { AuthRequest } from '../middlewares/auth.middleware';
 import { SuccessResponse } from '../utils/response.util';
-import { asyncHandler } from '../utils/assyncHandler';
+import { asyncHandler } from '../utils/asyncHandler';
 
 export class LearningPathController {
   private learningPathService: LearningPathService;
@@ -13,7 +13,7 @@ export class LearningPathController {
 
   createLearningPath = asyncHandler(async (req: AuthRequest, res: Response) => {
     const learningPath = await this.learningPathService.createLearningPath(
-      req.body, // Use req.body directly since it's not modified by validation middleware
+      req.body,
       req.user!.userId
     );
 
@@ -25,9 +25,7 @@ export class LearningPathController {
   });
 
   getAllLearningPaths = asyncHandler(async (req: AuthRequest, res: Response) => {
-    // Use validatedData if available, otherwise use req.query
     const query = req.validatedData || req.query;
-    
     const result = await this.learningPathService.getAllLearningPaths(query);
 
     new SuccessResponse(
@@ -36,9 +34,8 @@ export class LearningPathController {
     ).send(res);
   });
 
-  // ... keep other methods the same
   getLearningPathById = asyncHandler(async (req: AuthRequest, res: Response) => {
-    const learningPath = await this.learningPathService.getLearningPathById(req.params.id);
+    const learningPath = await this.learningPathService.getLearningPathById(req.params.id!);
 
     new SuccessResponse(
       'Learning path retrieved successfully',
@@ -47,7 +44,7 @@ export class LearningPathController {
   });
 
   getLearningPathBySlug = asyncHandler(async (req: AuthRequest, res: Response) => {
-    const learningPath = await this.learningPathService.getLearningPathBySlug(req.params.slug);
+    const learningPath = await this.learningPathService.getLearningPathBySlug(req.params.slug!);
 
     new SuccessResponse(
       'Learning path retrieved successfully',
@@ -57,7 +54,7 @@ export class LearningPathController {
 
   updateLearningPath = asyncHandler(async (req: AuthRequest, res: Response) => {
     const learningPath = await this.learningPathService.updateLearningPath(
-      req.params.id, 
+      req.params.id!, 
       req.body
     );
 
@@ -68,7 +65,7 @@ export class LearningPathController {
   });
 
   deleteLearningPath = asyncHandler(async (req: AuthRequest, res: Response) => {
-    await this.learningPathService.deleteLearningPath(req.params.id);
+    await this.learningPathService.deleteLearningPath(req.params.id!);
 
     new SuccessResponse(
       'Learning path deleted successfully'
@@ -76,7 +73,7 @@ export class LearningPathController {
   });
 
   publishLearningPath = asyncHandler(async (req: AuthRequest, res: Response) => {
-    const learningPath = await this.learningPathService.publishLearningPath(req.params.id);
+    const learningPath = await this.learningPathService.publishLearningPath(req.params.id!);
 
     new SuccessResponse(
       'Learning path published successfully',
@@ -85,7 +82,7 @@ export class LearningPathController {
   });
 
   archiveLearningPath = asyncHandler(async (req: AuthRequest, res: Response) => {
-    const learningPath = await this.learningPathService.archiveLearningPath(req.params.id);
+    const learningPath = await this.learningPathService.archiveLearningPath(req.params.id!);
 
     new SuccessResponse(
       'Learning path archived successfully',
@@ -96,7 +93,6 @@ export class LearningPathController {
   getFeaturedLearningPaths = asyncHandler(async (req: AuthRequest, res: Response) => {
     const query = req.validatedData || req.query;
     const limit = parseInt(query.limit as string) || 10;
-    
     const learningPaths = await this.learningPathService.getFeaturedLearningPaths(limit);
 
     new SuccessResponse(
@@ -109,8 +105,7 @@ export class LearningPathController {
     const { category } = req.params;
     const query = req.validatedData || req.query;
     const limit = parseInt(query.limit as string) || 10;
-    
-    const learningPaths = await this.learningPathService.getLearningPathsByCategory(category, limit);
+    const learningPaths = await this.learningPathService.getLearningPathsByCategory(category!, limit);
 
     new SuccessResponse(
       'Learning paths by category retrieved successfully',

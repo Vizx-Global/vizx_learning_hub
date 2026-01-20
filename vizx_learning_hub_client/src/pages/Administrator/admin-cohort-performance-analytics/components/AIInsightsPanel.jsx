@@ -3,12 +3,7 @@ import Icon from '../../../../components/AppIcon';
 
 const AIInsightsPanel = ({ insights = [] }) => {
   const getIconColor = (color) => {
-    const colors = {
-      success: 'text-success',
-      warning: 'text-warning',
-      primary: 'text-primary',
-      destructive: 'text-destructive'
-    };
+    const colors = { success: 'text-success', warning: 'text-warning', primary: 'text-primary', destructive: 'text-destructive' };
     return colors[color] || 'text-muted-foreground';
   };
 
@@ -21,17 +16,8 @@ const AIInsightsPanel = ({ insights = [] }) => {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {insights.map((insight) => (
           <div key={insight.id} className="bg-white rounded-lg p-4">
-            <div className="flex items-center gap-2 mb-2">
-              <Icon 
-                name={insight.icon} 
-                size={20} 
-                className={getIconColor(insight.color)} 
-              />
-              <span className="font-semibold text-foreground">{insight.title}</span>
-            </div>
-            <p className="text-sm text-muted-foreground">
-              {insight.description}
-            </p>
+            <div className="flex items-center gap-2 mb-2"><Icon name={insight.icon} size={20} className={getIconColor(insight.color)} /><span className="font-semibold text-foreground">{insight.title}</span></div>
+            <p className="text-sm text-muted-foreground">{insight.description}</p>
           </div>
         ))}
       </div>

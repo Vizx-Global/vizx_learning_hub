@@ -17,8 +17,13 @@ import RegistrationForm from "./pages/Authentication/SignUp";
 import LoginForm from "./pages/Authentication/SignIn";
 import LandingPage from "./pages/landing-page/index";
 import EmployeeLayout from "./layouts/EmployeeLayout";
-import EmployeeDashboard from "./pages/employee-learning-dashboard/Dashboard/index";
-
+import EmployeeDashboard from "./pages/Employees/Dashboard/Dashboard";
+import EmployeeCourses from "./pages/Employees/Courses/MyCourses";
+import EmployeeLearningPaths from "./pages/Employees/learning-path/LearningPaths";
+import EmployeeLearningPathDetail from "./pages/Employees/learning-path/components/LearningPathDetail";
+import EmployeeLeaderboards from "./pages/Employees/Community/Leaderboard";
+import EmployeeGames from "./pages/Employees/Games/Games";
+import EmployeeProfile from "./pages/Employees/User-Profile/Profile";
 import { ThemeProvider } from "./components/ThemeProvider";
 
 const Routes = () => {
@@ -28,14 +33,9 @@ const Routes = () => {
         <ErrorBoundary>
           <ScrollToTop />
           <RouterRoutes>
-            {/* Landing Page */}
             <Route path="/" element={<LandingPage />} />
-
-            {/*Authentication Pages */}
             <Route path="/register" element={<RegistrationForm />} />
             <Route path="/login" element={<LoginForm />} />
-
-            {/* Admin Dashboard Routes */}
             <Route path="/admin-learning-dashboard" element={<AdminDashboard />} />
             <Route path="/learning-path-management" element={<LearningPathManagement />} />
             <Route path="/learning-content-synchronization" element={<LearningContentSynchronization />} />
@@ -45,17 +45,19 @@ const Routes = () => {
             <Route path="/cohort-performance-analytics" element={<PerformanceAnalytics />} />
             <Route path="/administrative-system-configuration" element={<AdminSystemConfiguration />} />
             <Route path="/notification-management-center" element={<NotificationManagementCenter />} />
-
-
-            {/* Employee Routes */}
-            <Route path="/employee-dashboard" element={
+            <Route element={
               <ProtectedRoute requiredRole="EMPLOYEE">
                 <EmployeeLayout />
               </ProtectedRoute>
             }>
-              <Route index element={<EmployeeDashboard />} />
+              <Route path="/employee-dashboard" element={<EmployeeDashboard />} />
+              <Route path="/employee-courses" element={<EmployeeCourses />} />
+              <Route path="/employee-learning-paths" element={<EmployeeLearningPaths />} />
+              <Route path="/employee-learning-paths/:id" element={<EmployeeLearningPathDetail />} />
+              <Route path="/employee-leaderboards" element={<EmployeeLeaderboards />} />
+              <Route path="/employee-games" element={<EmployeeGames />} />
+              <Route path="/employee-profile" element={<EmployeeProfile />} />
             </Route>
-
             <Route path="*" element={<NotFound />} />
           </RouterRoutes>
         </ErrorBoundary>
