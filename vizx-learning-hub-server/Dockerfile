@@ -16,7 +16,7 @@ COPY . .
 
 # Generate Prisma client
 # Since the schema is in a capitalized directory 'Prisma', we specify it
-RUN npx prisma generate --schema=./Prisma/schema.prisma
+RUN npx prisma generate --schema=./prisma/schema.prisma
 
 # Create uploads directory if it doesn't exist
 RUN mkdir -p uploads
