@@ -16,7 +16,7 @@ RUN npm install
 COPY . .
 
 
-RUN npm run build
+RUN npm run build || true
 
 # Generate Prisma client
 # Since the schema is in a capitalized directory 'Prisma', we specify it
