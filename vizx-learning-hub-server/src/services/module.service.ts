@@ -4,9 +4,9 @@ import {
   Module, 
   ContentType, 
   DifficultyLevel, 
-  Prisma,
-  type ModuleWithLearningPath 
+  Prisma
 } from '@prisma/client';
+import { ModuleWithLearningPath } from '../repositories/module.repository';
 import { 
   NotFoundError, 
   ValidationError, 
@@ -284,6 +284,10 @@ export class ModuleService {
 
   async deleteFile(publicId: string, resourceType: string = 'image'): Promise<void> {
     await FileUploadService.deleteFile(publicId);
+  }
+
+  async getModuleStats() {
+    return await ModuleRepository.getModuleStats();
   }
 
   async healthCheck() {

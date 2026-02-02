@@ -38,6 +38,7 @@ export class LearningPathService {
 
     const learningPathData: Prisma.LearningPathCreateInput = {
       ...data,
+      slug,
       difficulty: data.difficulty || 'BEGINNER',
       prerequisites: data.prerequisites || [],
       learningObjectives: data.learningObjectives || [],
@@ -54,6 +55,22 @@ export class LearningPathService {
   async getLearningPathById(id: string): Promise<LearningPath> {
     const learningPath = await LearningPathRepository.findById(id);
     if (!learningPath) throw new NotFoundError('Learning path not found');
+    
+    // Enrich with prerequisite names if they exist
+    if (learningPath.prerequisites && Array.isArray(learningPath.prerequisites) && learningPath.prerequisites.length > 0) {
+      const prereqValues = learningPath.prerequisites as string[];
+      const prereqs = await prisma.learningPath.findMany({
+        where: { 
+          OR: [
+            { id: { in: prereqValues } },
+            { title: { in: prereqValues } }
+          ]
+        },
+        select: { id: true, title: true }
+      });
+      (learningPath as any).prerequisiteDetails = prereqs;
+    }
+    
     return learningPath;
   }
 

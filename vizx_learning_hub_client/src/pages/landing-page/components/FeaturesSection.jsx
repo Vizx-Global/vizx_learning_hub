@@ -37,7 +37,7 @@ const FeaturesSection = () => {
   const itemVariants = { hidden: { y: 20, opacity: 0 }, visible: { y: 0, opacity: 1, transition: { duration: 0.5 } } };
 
   return (
-    <section className="py-16 lg:py-24 bg-background relative overflow-hidden">
+    <section id="features" className="py-16 lg:py-24 bg-background relative overflow-hidden">
       <div className="absolute inset-0 overflow-hidden">
         <div className="absolute -top-40 -right-40 w-80 h-80 bg-primary/5 rounded-full blur-3xl"></div>
         <div className="absolute top-60 -left-40 w-80 h-80 bg-accent/5 rounded-full blur-3xl"></div>

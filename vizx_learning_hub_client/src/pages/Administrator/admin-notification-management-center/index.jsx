@@ -9,6 +9,11 @@ import NotificationList from './components/NotificationList';
 import CreateNotificationModal from './components/CreateNotificationModal';
 import NotificationTemplates from './components/NotificationTemplates';
 import RecentActivity from './components/RecentActivity';
+import ViewNotificationModal from './components/ViewNotificationModal';
+import notificationService from '../../../api/notificationService';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { toast } from 'react-hot-toast';
+import Swal from 'sweetalert2';
 
 const NotificationManagementCenter = () => {
   const navigate = useNavigate();
@@ -18,94 +23,84 @@ const NotificationManagementCenter = () => {
   const [typeFilter, setTypeFilter] = useState('all');
   const [audienceFilter, setAudienceFilter] = useState('all');
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [viewingNotification, setViewingNotification] = useState(null);
+  const [isViewModalOpen, setIsViewModalOpen] = useState(false);
 
-  // Mock notifications data
-  const mockNotifications = [
-    {
-      id: 1,
-      title: 'Weekly Learning Progress Report',
-      message: 'Your weekly summary of completed modules and achievements',
-      type: 'email',
-      recipients: 150,
-      status: 'sent',
-      scheduledDate: 'Oct 15, 2024',
-      scheduledTime: '09:00 AM',
-      deliveryRate: 96,
-      delivered: 144,
-      openRate: 68
+  const queryClient = useQueryClient();
+
+  const { data: notificationsData, isLoading: isListLoading } = useQuery({
+    queryKey: ['admin-notifications', statusFilter, typeFilter, searchQuery],
+    queryFn: () => notificationService.getNotifications({ 
+      status: statusFilter !== 'all' ? statusFilter.toUpperCase() : undefined, 
+      type: typeFilter !== 'all' ? typeFilter.toUpperCase() : undefined,
+      all: 'true',
+      search: searchQuery
+    })
+  });
+
+  const { data: statsData, isLoading: isStatsLoading } = useQuery({
+    queryKey: ['admin-notification-stats'],
+    queryFn: () => notificationService.getAdminStats()
+  });
+
+  const broadcastMutation = useMutation({
+    mutationFn: (data) => notificationService.broadcastNotification(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries(['admin-notifications']);
+      queryClient.invalidateQueries(['admin-notification-stats']);
+      toast.success('Notification broadcasted successfully!');
     },
-    {
-      id: 2,
-      title: 'New AI Fundamentals Course',
-      message: 'Exciting new course on AI basics is now available',
-      type: 'push',
-      recipients: 89,
-      status: 'scheduled',
-      scheduledDate: 'Oct 18, 2024',
-      scheduledTime: '10:00 AM',
-      deliveryRate: 0,
-      delivered: 0,
-      openRate: 0
-    },
-    {
-      id: 3,
-      title: 'Maintain Your Learning Streak',
-      message: 'Do not break your 15-day learning streak!',
-      type: 'in-app',
-      recipients: 67,
-      status: 'sent',
-      scheduledDate: 'Oct 14, 2024',
-      scheduledTime: '08:00 AM',
-      deliveryRate: 94,
-      delivered: 63,
-      openRate: 72
-    },
-    {
-      id: 4,
-      title: 'Achievement Unlocked: ML Expert',
-      message: 'Congratulations on completing the Machine Learning path',
-      type: 'email',
-      recipients: 12,
-      status: 'sent',
-      scheduledDate: 'Oct 13, 2024',
-      scheduledTime: '02:30 PM',
-      deliveryRate: 100,
-      delivered: 12,
-      openRate: 85
-    },
-    {
-      id: 5,
-      title: 'Upcoming Live Session Reminder',
-      message: 'Join us tomorrow for an interactive AI workshop',
-      type: 'push',
-      recipients: 45,
-      status: 'draft',
-      scheduledDate: '-',
-      scheduledTime: '-',
-      deliveryRate: 0,
-      delivered: 0,
-      openRate: 0
+    onError: () => toast.error('Failed to broadcast notification')
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id) => notificationService.deleteNotification(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries(['admin-notifications']);
+      queryClient.invalidateQueries(['admin-notification-stats']);
+      toast.success('Notification deleted');
     }
-  ];
+  });
+
+  const notifications = notificationsData?.data?.data?.notifications || [];
 
   const handleCreateNotification = (formData) => {
-    console.log('Creating notification:', formData);
-    // Add API call here
+    broadcastMutation.mutate(formData);
+  };
+
+  const handleDelete = (id) => {
+    Swal.fire({
+      title: 'Are you sure?',
+      text: "You won't be able to revert this!",
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#3085d6',
+      cancelButtonColor: '#d33',
+      confirmButtonText: 'Yes, delete it!',
+      background: '#1a1b1e',
+      color: '#ffffff',
+      customClass: {
+        popup: 'rounded-[2rem] border border-border shadow-2xl',
+        confirmButton: 'rounded-xl font-bold uppercase tracking-widest px-6 py-3',
+        cancelButton: 'rounded-xl font-bold uppercase tracking-widest px-6 py-3'
+      }
+    }).then((result) => {
+      if (result.isConfirmed) {
+        deleteMutation.mutate(id);
+      }
+    });
   };
 
   const handleEdit = (id) => {
     console.log('Editing notification:', id);
-    // Navigate to edit page or open modal
-  };
-
-  const handleDelete = (id) => {
-    console.log('Deleting notification:', id);
-    // Add delete logic with confirmation
   };
 
   const handleView = (id) => {
-    console.log('Viewing notification:', id);
-    // Open detailed view modal
+    const notification = notifications.find(n => n.id === id);
+    if (notification) {
+      setViewingNotification(notification);
+      setIsViewModalOpen(true);
+    }
   };
 
   const handleDuplicate = (id) => {
@@ -185,7 +180,7 @@ const NotificationManagementCenter = () => {
         {/* Main Content Area */}
         <main className="p-4 space-y-6">
           {/* Notification Stats */}
-          <NotificationStats />
+          <NotificationStats stats={statsData?.data?.data} isLoading={isStatsLoading} />
 
           {/* Filters */}
           <NotificationFilters
@@ -201,11 +196,12 @@ const NotificationManagementCenter = () => {
 
           {/* Notification List */}
           <NotificationList
-            notifications={mockNotifications}
+            notifications={notifications}
             onEdit={handleEdit}
             onDelete={handleDelete}
             onView={handleView}
             onDuplicate={handleDuplicate}
+            isLoading={isListLoading}
           />
 
           {/* Templates and Activity Grid */}
@@ -217,7 +213,7 @@ const NotificationManagementCenter = () => {
 
             {/* Recent Activity */}
             <div className="xl:col-span-1">
-              <RecentActivity />
+              <RecentActivity activities={notifications.slice(0, 5)} isLoading={isListLoading} />
             </div>
           </div>
 
@@ -262,6 +258,17 @@ const NotificationManagementCenter = () => {
         isOpen={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
         onSubmit={handleCreateNotification}
+      />
+
+      {/* View Notification Modal */}
+      <ViewNotificationModal
+        isOpen={isViewModalOpen}
+        onClose={() => {
+          setIsViewModalOpen(false);
+          setViewingNotification(null);
+        }}
+        notification={viewingNotification}
+        onDelete={handleDelete}
       />
     </div>
   );

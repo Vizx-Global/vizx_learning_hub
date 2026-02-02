@@ -44,7 +44,7 @@ const PlatformDemo = () => {
   const currentSteps = getCurrentSteps();
 
   return (
-    <section className="py-16 lg:py-24 bg-gradient-to-b from-background to-card">
+    <section id="how-it-works" className="py-16 lg:py-24 bg-gradient-to-b from-background to-card">
       <div className="container mx-auto px-4 lg:px-6">
         <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }} viewport={{ once: true }} className="text-center mb-12 lg:mb-16">
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/20 mb-4"><Sparkles className="w-4 h-4 text-primary" /><span className="text-sm font-medium text-primary">Platform Overview</span></div>

@@ -18,10 +18,14 @@ import {
   ChevronRight,
   Sparkles,
   LayoutGrid,
-  List
+  List,
+  Lock,
+  CheckCircle2
 } from 'lucide-react';
 import { useLocation } from 'react-router-dom';
 import moduleService from '../../../api/moduleService';
+import learningPathService from '../../../api/learningPathService';
+import enrollmentService from '../../../api/enrollmentService';
 import SideVideoPlayer from './components/SideVideoPlayer';
 import { Input } from '../../../components/ui/Input';
 import { Button } from '../../../components/ui/Button';
@@ -29,66 +33,134 @@ import { Badge } from '../../../components/ui/badge';
 import { cn } from '../../../utils/cn';
 import Swal from 'sweetalert2';
 
+import { useFilter } from '../../../contexts/FilterContext';
+import { parseISO } from 'date-fns';
+
 const MyCourses = () => {
+  const { dateRange, activePreset } = useFilter();
   const location = useLocation();
   const [modules, setModules] = useState([]);
-  const [filteredModules, setFilteredModules] = useState([]);
+  const [learningPaths, setLearningPaths] = useState([]);
+  const [enrollments, setEnrollments] = useState([]);
+  const [groupedModules, setGroupedModules] = useState({});
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedType, setSelectedType] = useState('All');
   const [selectedDifficulty, setSelectedDifficulty] = useState('All');
+  const [viewMode, setViewMode] = useState('grid'); // 'grid' or 'list'
   const [selectedModule, setSelectedModule] = useState(null);
   const [isPlayerOpen, setIsPlayerOpen] = useState(false);
-  const [viewMode, setViewMode] = useState('grid'); // 'grid' or 'list'
 
   const contentTypes = ['All', 'VIDEO', 'AUDIO', 'DOCUMENT', 'TEXT', 'QUIZ'];
   const difficulties = ['All', 'BEGINNER', 'INTERMEDIATE', 'ADVANCED'];
 
-  const stats = useMemo(() => ({
-    total: modules.length,
-    inProgress: Math.floor(modules.length * 0.4), // Mocked for UI
-    completed: Math.floor(modules.length * 0.2), // Mocked for UI
-    totalPoints: modules.reduce((acc, m) => acc + (m.completionPoints || 0), 0)
-  }), [modules]);
+  const stats = useMemo(() => {
+    const enrolledModules = Object.values(groupedModules).flatMap(group => group.modules);
+    return {
+      total: enrolledModules.length,
+      inProgress: enrollments.filter(e => e.status === 'IN_PROGRESS').length,
+      completed: enrollments.filter(e => e.status === 'COMPLETED').length,
+      totalPoints: enrolledModules.reduce((acc, m) => acc + (m.completionPoints || 0), 0)
+    };
+  }, [groupedModules, enrollments]);
 
-  const fetchModules = async () => {
+  const fetchData = async () => {
     setLoading(true);
     try {
-      const response = await moduleService.getAllModules();
-      const body = response.data;
-      const modulesData = body?.data?.modules || body?.modules || (Array.isArray(body?.data) ? body.data : (Array.isArray(body) ? body : []));
-      
+      const [modulesRes, pathsRes, enrollmentsRes] = await Promise.all([
+        moduleService.getAllModules(),
+        learningPathService.getAllLearningPaths(),
+        enrollmentService.getMyEnrollments({ includeProgress: true, includePath: true })
+      ]);
+
+      const modulesData = modulesRes.data?.data?.modules || modulesRes.data?.modules || (Array.isArray(modulesRes.data?.data) ? modulesRes.data.data : (Array.isArray(modulesRes.data) ? modulesRes.data : []));
+      const pathsData = pathsRes.data?.data?.learningPaths || pathsRes.data?.learningPaths || (Array.isArray(pathsRes.data?.data) ? pathsRes.data.data : (Array.isArray(pathsRes.data) ? pathsRes.data : []));
+      const enrollData = enrollmentsRes.data?.data?.enrollments || enrollmentsRes.data?.enrollments || (Array.isArray(enrollmentsRes.data?.data) ? enrollmentsRes.data.data : (Array.isArray(enrollmentsRes.data) ? enrollmentsRes.data : []));
+
       setModules(modulesData);
-      setFilteredModules(modulesData);
-      return modulesData;
+      setEnrollments(enrollData);
+
+      const enrolledPathIds = new Set(enrollData.map(e => e.learningPathId));
+      
+      const enrichedPaths = pathsData
+        .filter(p => enrolledPathIds.has(p.id))
+        .map(path => {
+          const enrollment = enrollData.find(e => e.learningPathId === path.id);
+          return {
+            ...path,
+            progress: enrollment?.progress || 0,
+            status: enrollment?.status || 'ENROLLED',
+            completionRate: `${Math.round(enrollment?.progress || 0)}%`
+          };
+        });
+
+      setLearningPaths(enrichedPaths);
+
+      // Initial filter/grouping
+      const initialGrouped = groupModules(modulesData, enrichedPaths, enrollData);
+      setGroupedModules(initialGrouped);
+
+      return { modulesData, enrichedPaths };
     } catch (error) {
-      console.error('Error fetching modules:', error);
+      console.error('Error fetching data:', error);
       Swal.fire({
         icon: 'error',
         title: 'Connection Issue',
         text: 'Failed to load course modules. Please try again later.',
       });
-      return [];
+      return { modulesData: [], enrichedPaths: [] };
     } finally {
       setLoading(false);
     }
   };
 
+  const groupModules = (allModules, enrolledPaths, allEnrollments) => {
+    const grouped = {};
+    enrolledPaths.forEach(path => {
+      const enrollment = allEnrollments.find(e => e.learningPathId === path.id);
+      const progressMap = new Map();
+      if (enrollment?.moduleProgress) {
+        enrollment.moduleProgress.forEach(mp => {
+          progressMap.set(mp.moduleId, {
+            status: mp.status,
+            progress: mp.progress || 0
+          });
+        });
+      }
+
+      grouped[path.id] = {
+        path,
+        modules: allModules
+          .filter(m => m.learningPathId === path.id)
+          .map(m => {
+            const moduleProgress = progressMap.get(m.id);
+            return {
+              ...m,
+              status: moduleProgress?.status || 'NOT_STARTED',
+              progress: moduleProgress?.progress || 0,
+              enrollmentId: enrollment?.id
+            };
+          })
+      };
+    });
+    return grouped;
+  };
+
   useEffect(() => {
     const handleNavigationState = async () => {
-      const allModules = await fetchModules();
+      const { modulesData } = await fetchData();
       
       const statePathId = location.state?.learningPathId;
       const stateModuleId = location.state?.moduleId;
 
       if (stateModuleId) {
-        const target = allModules.find(m => m.id === stateModuleId);
+        const target = modulesData.find(m => m.id === stateModuleId);
         if (target) {
             setSelectedModule(target);
             setIsPlayerOpen(true);
         }
       } else if (statePathId) {
-        const pathModules = allModules.filter(m => m.learningPathId === statePathId);
+        const pathModules = modulesData.filter(m => m.learningPathId === statePathId);
         if (pathModules.length > 0) {
            setSelectedModule(pathModules[0]);
            setIsPlayerOpen(true);
@@ -100,7 +172,7 @@ const MyCourses = () => {
 
   useEffect(() => {
     filterModules();
-  }, [searchQuery, selectedType, selectedDifficulty, modules]);
+  }, [searchQuery, selectedType, selectedDifficulty, modules, learningPaths, dateRange, activePreset]);
 
   const filterModules = () => {
     let result = modules;
@@ -121,7 +193,26 @@ const MyCourses = () => {
       result = result.filter(m => m.difficulty === selectedDifficulty);
     }
 
-    setFilteredModules(result);
+    const isWithin = (dateStr) => {
+      if (!dateStr) return false;
+      if (activePreset === 'All Time') return true;
+      if (!dateRange || !dateRange.from) return true;
+      
+      const date = parseISO(dateStr);
+      const start = dateRange.from;
+      const end = dateRange.to || new Date();
+      
+      return date >= start && date <= end;
+    };
+
+    if (activePreset !== 'All Time') {
+      const filteredEnrollments = enrollments.filter(e => isWithin(e.lastActivityAt));
+      const filteredPathIds = new Set(filteredEnrollments.map(e => e.learningPathId));
+      result = result.filter(m => filteredPathIds.has(m.learningPathId));
+    }
+
+    const grouped = groupModules(result, learningPaths, enrollments);
+    setGroupedModules(grouped);
   };
 
   const getModuleCategoryColor = (category) => {
@@ -134,15 +225,20 @@ const MyCourses = () => {
     return colors[category] || 'bg-slate-500/10 text-slate-500 border-slate-500/20';
   };
 
-  const getTypeIcon = (type) => {
-    switch (type) {
-      case 'VIDEO': return <Video className="h-4 w-4" />;
-      case 'AUDIO': return <Mic className="h-4 w-4" />;
-      case 'DOCUMENT': return <FileText className="h-4 w-4" />;
-      case 'TEXT': return <BookOpen className="h-4 w-4" />;
-      case 'QUIZ': return <Sparkles className="h-4 w-4" />;
-      default: return <Zap className="h-4 w-4" />;
-    }
+  const getTypeIcon = (module) => {
+    const type = module.contentType;
+    const url = module.documentUrl || '';
+    
+    if (type === 'VIDEO') return <Video className="h-4 w-4" />;
+    if (type === 'AUDIO') return <Mic className="h-4 w-4" />;
+    if (type === 'TEXT') return <BookOpen className="h-4 w-4" />;
+    if (type === 'QUIZ') return <Sparkles className="h-4 w-4" />;
+    
+    if (url.toLowerCase().endsWith('.pdf')) return <FileText className="h-4 w-4 text-red-500" />;
+    if (url.toLowerCase().match(/\.(doc|docx)$/)) return <FileText className="h-4 w-4 text-blue-500" />;
+    if (url.toLowerCase().match(/\.(ppt|pptx)$/)) return <BarChart className="h-4 w-4 text-orange-500" />;
+    
+    return <FileText className="h-4 w-4" />;
   };
 
   return (
@@ -152,12 +248,17 @@ const MyCourses = () => {
         {/* Header Section */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-4">
           <div>
-            <h1 className="text-3xl font-black tracking-tight uppercase">My Courses</h1>
-            <p className="text-muted-foreground text-sm font-medium opacity-70">Empower your expertise with curated modules.</p>
+            <h1 className="text-3xl font-black tracking-tight uppercase">My Learning Journey</h1>
+            <p className="text-muted-foreground text-sm font-medium opacity-70">Focus on your active enrolled paths and achieve mastery.</p>
           </div>
-          <Badge variant="outline" className="px-4 py-1.5 rounded-full border-border/60 font-bold uppercase tracking-widest text-[10px]">
-            {filteredModules.length} Modules Available
-          </Badge>
+          <div className="flex gap-4">
+            <Badge variant="outline" className="px-4 py-1.5 rounded-full border-border/60 font-bold uppercase tracking-widest text-[10px]">
+              {learningPaths.length} Active Paths
+            </Badge>
+            <Badge variant="outline" className="px-4 py-1.5 rounded-full border-border/60 font-bold uppercase tracking-widest text-[10px]">
+              {modules.length} Total Modules
+            </Badge>
+          </div>
         </div>
         
         {/* Control & Filter Panel */}
@@ -246,125 +347,202 @@ const MyCourses = () => {
             ))}
           </div>
         ) : (
-          <div className={cn(
-            "grid gap-8",
-            viewMode === 'grid' ? "grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4" : "grid-cols-1"
-          )}>
-            <AnimatePresence>
-              {filteredModules.map((module, idx) => (
-                <motion.div
-                  key={module.id}
-                  layoutId={module.id}
-                  initial={{ opacity: 0, y: 30 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, scale: 0.9 }}
-                  transition={{ delay: idx * 0.05 }}
-                  className={cn(
-                    "group relative bg-card border border-border/60 shadow-sm overflow-hidden hover:shadow-2xl hover:border-primary/30 transition-all duration-500",
-                    viewMode === 'grid' ? "flex flex-col rounded-[2rem] aspect-[4/5] h-full" : "flex flex-col md:flex-row rounded-[1.5rem] items-center"
-                  )}
-                >
-                  {/* Visual Interface */}
-                  <div className={cn(
-                    "relative overflow-hidden bg-muted/30",
-                    viewMode === 'grid' ? "h-[55%]" : "w-full md:w-80 h-48 rounded-[1.5rem] m-3 shrink-0"
-                  )}>
-                    {module.thumbnailUrl ? (
-                      <img 
-                        src={module.thumbnailUrl} 
-                        alt={module.title}
-                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-1000 ease-out"
-                      />
-                    ) : (
-                      <div className="w-full h-full flex flex-col items-center justify-center bg-gradient-to-br from-background to-muted/20">
-                         <div className="p-4 bg-background rounded-2xl shadow-sm ring-1 ring-border group-hover:scale-110 transition-transform">
-                           {getTypeIcon(module.contentType)}
-                         </div>
+          <div className="space-y-16">
+            {Object.entries(groupedModules).map(([pathId, { path, modules: pathModules }], pathIdx) => (
+              pathModules.length > 0 && (
+                <div key={pathId} className="space-y-8">
+                  <div className="flex items-end justify-between border-b border-border/40 pb-4">
+                    <div className="flex flex-col md:flex-row md:items-center gap-4 flex-1">
+                      <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary font-black shadow-inner shrink-0">
+                        {pathIdx + 1}
                       </div>
-                    )}
-                    
-                    <div className="absolute top-4 left-4 flex gap-2">
-                       <span className="px-3 py-1 bg-black/40 text-white backdrop-blur-md rounded-lg text-[9px] font-black uppercase tracking-widest border border-white/10 flex items-center gap-2">
-                          {getTypeIcon(module.contentType)}
-                          {module.contentType}
-                       </span>
-                    </div>
-
-                    <div className="absolute top-4 right-4">
-                       <span className={cn(
-                         "px-2.5 py-1 text-[9px] font-black uppercase tracking-tighter rounded-lg border",
-                         module.difficulty === 'ADVANCED' ? 'bg-red-500/10 text-red-500 border-red-500/20' : 
-                         module.difficulty === 'INTERMEDIATE' ? 'bg-warning/10 text-warning border-warning/20' : 
-                         'bg-success/10 text-success border-success/20'
-                       )}>
-                          {module.difficulty}
-                       </span>
-                    </div>
-                  </div>
-
-                  {/* Information Design */}
-                  <div className="p-6 flex flex-col flex-1 min-w-0">
-                    <div className="flex items-center justify-between mb-3">
-                       <span className={cn(
-                         "px-2 py-0.5 text-[9px] font-black uppercase tracking-widest rounded border shrink-0",
-                         getModuleCategoryColor(module.category)
-                       )}>
-                         {module.category || 'Strategic Growth'}
-                       </span>
-                       <div className="flex items-center gap-1.5 text-muted-foreground">
-                          <Clock className="h-3 w-3" />
-                          <span className="text-[10px] font-bold uppercase tracking-tighter">{module.estimatedMinutes}m</span>
-                       </div>
-                    </div>
-
-                    <h3 className="text-xl font-black tracking-tight mb-3 text-foreground/90 group-hover:text-primary transition-colors leading-tight line-clamp-2">
-                      {module.title}
-                    </h3>
-
-                    <p className="text-muted-foreground text-xs font-medium leading-relaxed line-clamp-2 mb-6 opacity-70">
-                       {module.description || 'Achieve deep mastery in this module specially curated for your professional evolution.'}
-                    </p>
-
-                    <div className="mt-auto flex items-center gap-4">
-                       <Button 
-                         onClick={() => {
-                           setSelectedModule(module);
-                           setIsPlayerOpen(true);
-                         }}
-                         className="flex-1 bg-primary text-white rounded-xl h-12 font-black text-[10px] uppercase tracking-[0.15em] hover:shadow-lg hover:shadow-primary/30 transition-all gap-2"
-                       >
-                          {module.status === 'IN_PROGRESS' ? 'Continue Learning' : 'Start Learning'} <ChevronRight className="h-4 w-4" />
-                       </Button>
-                       <Button variant="outline" size="icon" className="h-12 w-12 rounded-xl border-border/60 hover:bg-muted transition-colors">
-                          <MoreVertical className="h-4 w-4" />
-                       </Button>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between gap-4 mb-2">
+                           <h2 className="text-2xl font-black tracking-tight uppercase text-foreground/90 truncate">{path.title}</h2>
+                           <span className="text-[12px] font-black text-primary bg-primary/10 px-3 py-1 rounded-lg shrink-0">{path.completionRate}</span>
+                        </div>
+                        <div className="flex items-center gap-4">
+                           <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden border border-border/40">
+                              <motion.div 
+                                initial={{ width: 0 }}
+                                animate={{ width: path.completionRate }}
+                                transition={{ duration: 1, ease: "easeOut" }}
+                                className="h-full bg-primary"
+                              />
+                           </div>
+                           <div className="flex items-center gap-3 shrink-0">
+                             <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">{path.category}</span>
+                             <div className="w-1.5 h-1.5 rounded-full bg-border" />
+                             <span className="text-[10px] font-black uppercase tracking-widest text-primary">{pathModules.length} Modules</span>
+                           </div>
+                        </div>
+                      </div>
                     </div>
                   </div>
-                </motion.div>
-              ))}
-            </AnimatePresence>
+
+                  <div className={cn(
+                    "grid gap-8",
+                    viewMode === 'grid' ? "grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4" : "grid-cols-1"
+                  )}>
+                    <AnimatePresence>
+                      {pathModules.map((module, idx) => {
+                        const isPathCompleted = path.progress === 100 || path.status === 'COMPLETED';
+                        // A module is strictly "complete" if its status is COMPLETED or progress is 100%
+                        const isModuleComplete = module.status === 'COMPLETED' || module.progress === 100;
+
+                        // Locking Logic:
+                        // 1. If the entire path (course) is completed, all modules are unlocked
+                        // 2. Else if it's the first module (idx === 0), it's always unlocked
+                        // 3. Else if the module itself is complete, it's unlocked for review
+                        // 4. Else if the previous module is complete, this current one is unlocked for progress
+                        // 5. Otherwise, the module is locked
+                        const isLocked = isPathCompleted ? false : (
+                           idx > 0 && 
+                           !isModuleComplete && 
+                           !(pathModules[idx-1].status === 'COMPLETED' || pathModules[idx-1].progress === 100)
+                        );
+                        
+                        return (
+                          <motion.div
+                            key={module.id}
+                            layoutId={module.id}
+                            initial={{ opacity: 0, y: 30 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.9 }}
+                            transition={{ delay: idx * 0.05 }}
+                            className={cn(
+                              "group relative bg-card border border-border/60 shadow-sm overflow-hidden hover:shadow-2xl hover:border-primary/30 transition-all duration-500",
+                              viewMode === 'grid' ? "flex flex-col rounded-[2rem] aspect-[4/5] h-full" : "flex flex-col md:flex-row rounded-[1.5rem] items-center",
+                              isLocked && "opacity-75 grayscale-[0.5]"
+                            )}
+                          >
+                            {/* Visual Interface */}
+                            <div className={cn(
+                              "relative overflow-hidden bg-muted/30",
+                              viewMode === 'grid' ? "h-[55%]" : "w-full md:w-80 h-48 rounded-[1.5rem] m-3 shrink-0"
+                            )}>
+                              {module.thumbnailUrl ? (
+                                <img 
+                                  src={module.thumbnailUrl} 
+                                  alt={module.title}
+                                  className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-1000 ease-out"
+                                />
+                              ) : (
+                                <div className="w-full h-full flex flex-col items-center justify-center bg-gradient-to-br from-background to-muted/20">
+                                   <div className="p-4 bg-background rounded-2xl shadow-sm ring-1 ring-border group-hover:scale-110 transition-transform">
+                                     {isLocked ? <Lock className="h-4 w-4 text-muted-foreground" /> : getTypeIcon(module)}
+                                   </div>
+                                </div>
+                              )}
+                              
+                              {isLocked && (
+                                <div className="absolute inset-0 bg-background/40 backdrop-blur-[2px] flex items-center justify-center z-10">
+                                   <div className="p-4 bg-background/80 rounded-full shadow-xl border border-border">
+                                      <Lock className="h-6 w-6 text-muted-foreground" />
+                                   </div>
+                                </div>
+                              )}
+
+                              <div className="absolute top-4 left-4 flex gap-2 z-20">
+                                 <span className={cn(
+                                   "px-3 py-1 bg-black/40 text-white backdrop-blur-md rounded-lg text-[9px] font-black uppercase tracking-widest border border-white/10 flex items-center gap-2",
+                                   module.contentType === 'DOCUMENT' && module.documentUrl?.toLowerCase().endsWith('.pdf') && "bg-red-500/20 border-red-500/30",
+                                   module.contentType === 'DOCUMENT' && module.documentUrl?.toLowerCase().match(/\.(ppt|pptx)$/) && "bg-orange-500/20 border-orange-500/30",
+                                   module.contentType === 'DOCUMENT' && module.documentUrl?.toLowerCase().match(/\.(doc|docx)$/) && "bg-blue-500/20 border-blue-500/30"
+                                 )}>
+                                    {getTypeIcon(module)}
+                                    {module.contentType === 'DOCUMENT' 
+                                      ? (module.documentUrl?.split('.').pop()?.toUpperCase() || 'DOC') 
+                                      : module.contentType}
+                                 </span>
+                              </div>
+
+                              <div className="absolute top-4 right-4 z-20">
+                                 <span className={cn(
+                                   "px-2.5 py-1 text-[9px] font-black uppercase tracking-tighter rounded-lg border",
+                                   module.difficulty === 'ADVANCED' ? 'bg-red-500/10 text-red-500 border-red-500/20' : 
+                                   module.difficulty === 'INTERMEDIATE' ? 'bg-warning/10 text-warning border-warning/20' : 
+                                   'bg-success/10 text-success border-success/20'
+                                 )}>
+                                    {module.difficulty}
+                                 </span>
+                              </div>
+                            </div>
+
+                            {/* Information Design */}
+                            <div className="p-6 flex flex-col flex-1 min-w-0">
+                              <div className="flex items-center justify-between mb-3">
+                                 <span className={cn(
+                                   "px-2 py-0.5 text-[9px] font-black uppercase tracking-widest rounded border shrink-0",
+                                   getModuleCategoryColor(module.category)
+                                 )}>
+                                   {module.category || 'Strategic Growth'}
+                                 </span>
+                                 <div className="flex items-center gap-1.5 text-muted-foreground">
+                                    <Clock className="h-3 w-3" />
+                                    <span className="text-[10px] font-bold uppercase tracking-tighter">{module.estimatedMinutes}m</span>
+                                 </div>
+                              </div>
+
+                              <h3 className="text-xl font-black tracking-tight mb-3 text-foreground/90 group-hover:text-primary transition-colors leading-tight line-clamp-2">
+                                {module.title}
+                              </h3>
+
+                              <p className="text-muted-foreground text-xs font-medium leading-relaxed line-clamp-2 mb-6 opacity-70">
+                                 {module.description || 'Achieve deep mastery in this module specially curated for your professional evolution.'}
+                              </p>
+
+                              <div className="mt-auto flex items-center gap-4">
+                                 <Button 
+                                   disabled={isLocked}
+                                   onClick={() => {
+                                     setSelectedModule(module);
+                                     setIsPlayerOpen(true);
+                                   }}
+                                   className={cn(
+                                     "flex-1 rounded-xl h-12 font-black text-[10px] uppercase tracking-[0.15em] transition-all gap-2",
+                                     isLocked ? "bg-muted text-muted-foreground cursor-not-allowed" :
+                                     module.status === 'COMPLETED' 
+                                       ? "bg-success/20 text-success border border-success/30 hover:bg-success/30" 
+                                       : "bg-primary text-white hover:shadow-lg hover:shadow-primary/30"
+                                   )}
+                                 >
+                                    {isLocked ? <Lock className="h-4 w-4" /> : module.status === 'COMPLETED' && <CheckCircle2 className="h-4 w-4" />}
+                                    {isLocked ? 'Locked' : module.status === 'COMPLETED' ? 'Review Module' : 
+                                     module.status === 'IN_PROGRESS' ? 'Continue' : 'Start Learning'} 
+                                    {!isLocked && <ChevronRight className="h-4 w-4" />}
+                                 </Button>
+                                 <Button variant="outline" size="icon" className="h-12 w-12 rounded-xl border-border/60 hover:bg-muted transition-colors">
+                                    <MoreVertical className="h-4 w-4" />
+                                 </Button>
+                              </div>
+                            </div>
+                          </motion.div>
+                        );
+                      })}
+                    </AnimatePresence>
+                  </div>
+                </div>
+              )
+            ))}
           </div>
         )}
 
         {/* Empty State */}
-        {!loading && filteredModules.length === 0 && (
+        {!loading && Object.keys(groupedModules).length === 0 && (
            <div className="text-center py-32 bg-card rounded-[3rem] border border-dashed border-border/60">
               <div className="w-24 h-24 bg-muted/40 rounded-full flex items-center justify-center mx-auto mb-8">
-                  <Search className="h-10 w-10 text-muted-foreground/40" />
+                  <BookOpen className="h-10 w-10 text-muted-foreground/40" />
               </div>
-              <h3 className="text-3xl font-black uppercase tracking-tighter">Zero results detected</h3>
+              <h3 className="text-3xl font-black uppercase tracking-tighter">No Enrolled Paths</h3>
               <p className="text-muted-foreground font-medium opacity-60 mt-3 max-w-sm mx-auto leading-relaxed">
-                  We couldn't locate any modules matching that intelligence criteria. Try recalibrating your search term or filters.
+                  You haven't enrolled in any learning paths yet. Explore the discovery page to start your professional journey.
               </p>
               <Button 
-                  onClick={() => {
-                      setSearchQuery('');
-                      setSelectedType('All');
-                      setSelectedDifficulty('All');
-                  }}
+                  onClick={() => window.location.href = '/learning-paths'}
                   className="mt-10 rounded-2xl h-14 px-10 font-bold uppercase tracking-widest text-[11px]"
               >
-                  Reset Discovery Filters
+                  Explore Learning Paths
               </Button>
            </div>
         )}

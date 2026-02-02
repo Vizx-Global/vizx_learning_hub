@@ -126,22 +126,40 @@ const UserProfileCard = ({ user, onEdit, isEditing, onSave, onCancel }) => {
         </div>
       </div>
       {/* Learning Statistics */}
-      <div className="grid grid-cols-4 gap-4 pt-4 border-t border-border">
-        <div className="text-center">
-          <div className="text-2xl font-bold text-primary">{user?.stats?.completedModules}</div>
-          <div className="text-sm text-muted-foreground">Modules Completed</div>
+      <div className="space-y-4 pt-4 border-t border-border">
+        <div className="flex items-center justify-between mb-1">
+          <h4 className="text-sm font-semibold text-foreground uppercase tracking-wider">Learning Progress</h4>
+          <span className="text-sm font-bold text-primary">{user?.overallProgress || 0}%</span>
         </div>
-        <div className="text-center">
-          <div className="text-2xl font-bold text-success">{user?.stats?.totalPoints}</div>
-          <div className="text-sm text-muted-foreground">Total Points</div>
+        
+        <div className="w-full bg-muted rounded-full h-2.5 overflow-hidden">
+          <div 
+            className="h-full bg-gradient-to-r from-primary to-secondary transition-all duration-500 ease-out"
+            style={{ width: `${user?.overallProgress || 0}%` }}
+          />
         </div>
-        <div className="text-center">
-          <div className="text-2xl font-bold text-warning">{user?.stats?.currentStreak}</div>
-          <div className="text-sm text-muted-foreground">Day Streak</div>
-        </div>
-        <div className="text-center">
-          <div className="text-2xl font-bold text-secondary">{user?.stats?.achievements}</div>
-          <div className="text-sm text-muted-foreground">Achievements</div>
+
+        <div className="grid grid-cols-4 gap-4 pt-2">
+          <div className="text-center group/stat transition-transform hover:scale-110 duration-200">
+            <div className="text-xl font-bold text-primary">
+              {user?.stats?.completedModules ?? 0}<span className="text-xs text-muted-foreground font-normal">/{user?.totalModules ?? 0}</span>
+            </div>
+            <div className="text-[10px] text-muted-foreground uppercase font-black tracking-tighter">Completed</div>
+          </div>
+          <div className="text-center group/stat transition-transform hover:scale-110 duration-200">
+            <div className="text-xl font-bold text-success">
+              {Math.max(0, (user?.totalModules || 30) - (user?.stats?.completedModules || 0))}
+            </div>
+            <div className="text-[10px] text-muted-foreground uppercase font-black tracking-tighter">Remaining</div>
+          </div>
+          <div className="text-center group/stat transition-transform hover:scale-110 duration-200">
+            <div className="text-xl font-bold text-warning">{user?.stats?.currentStreak}d</div>
+            <div className="text-[10px] text-muted-foreground uppercase font-black tracking-tighter">Streak</div>
+          </div>
+          <div className="text-center group/stat transition-transform hover:scale-110 duration-200">
+            <div className="text-xl font-bold text-secondary">{user?.stats?.achievements}</div>
+            <div className="text-[10px] text-muted-foreground uppercase font-black tracking-tighter">Badges</div>
+          </div>
         </div>
       </div>
     </div>

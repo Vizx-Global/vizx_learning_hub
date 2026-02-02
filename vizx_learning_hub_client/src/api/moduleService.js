@@ -18,6 +18,7 @@ const moduleService = {
   activateModule: (id) => axiosClient.patch(`/modules/${id}/activate`),
   deactivateModule: (id) => axiosClient.patch(`/modules/${id}/deactivate`),
   updateModuleThumbnail: (id, formData) => axiosClient.patch(`/modules/${id}/thumbnail`, formData, { headers: { 'Content-Type': 'multipart/form-data' } }),
+  getModuleStats: () => axiosClient.get('/modules/stats'),
   deleteModule: (id) => axiosClient.delete(`/modules/${id}`)
 };
 

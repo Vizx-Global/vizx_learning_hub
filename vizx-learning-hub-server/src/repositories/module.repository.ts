@@ -188,6 +188,42 @@ export class ModuleRepository {
     return title.toLowerCase().trim().replace(/[^a-z0-9\s-]/g, '').replace(/\s+/g, '-').replace(/-+/g, '-').substring(0, 100);
   }
 
+  static async getModuleStats() {
+    const [
+      total,
+      active,
+      inactive,
+      byDifficulty,
+      byType
+    ] = await Promise.all([
+      prisma.module.count(),
+      prisma.module.count({ where: { isActive: true } }),
+      prisma.module.count({ where: { isActive: false } }),
+      prisma.module.groupBy({
+        by: ['difficulty'],
+        _count: { _all: true }
+      }),
+      prisma.module.groupBy({
+        by: ['contentType'],
+        _count: { _all: true }
+      })
+    ]);
+
+    return {
+      total,
+      active,
+      inactive,
+      difficultyBreakdown: byDifficulty.reduce((acc, curr) => {
+        acc[curr.difficulty] = curr._count._all;
+        return acc;
+      }, {} as Record<string, number>),
+      typeBreakdown: byType.reduce((acc, curr) => {
+        acc[curr.contentType] = curr._count._all;
+        return acc;
+      }, {} as Record<string, number>)
+    };
+  }
+
   static async healthCheck() {
     try { await prisma.module.count(); return { status: 'healthy', database: true, timestamp: new Date().toISOString() }; }
     catch { return { status: 'unhealthy', database: false, timestamp: new Date().toISOString() }; }

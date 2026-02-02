@@ -16,12 +16,10 @@ import { Button } from '../../../../components/ui/Button';
 import { useNavigate } from 'react-router-dom';
 import { cn } from '../../../../utils/cn';
 
-const LearningPathCard = ({ path, isEnrolled, currentEnrollment, onEnroll, viewMode = 'grid' }) => {
+const LearningPathCard = ({ path, isEnrolled, onEnroll, viewMode = 'grid' }) => {
   const navigate = useNavigate();
   
-  const activePathId = currentEnrollment?.learningPathId || currentEnrollment?.path?.id;
-  const canEnroll = !currentEnrollment || activePathId === path.id;
-  const isCurrentPath = activePathId === path.id;
+  const isEnrolledInPath = isEnrolled;
 
   const handleCardClick = () => {
     navigate(`/employee-learning-paths/${path.id}`);
@@ -29,12 +27,11 @@ const LearningPathCard = ({ path, isEnrolled, currentEnrollment, onEnroll, viewM
 
   const handleEnrollClick = (e) => {
     e.stopPropagation();
-    if (!canEnroll && !isEnrolled) {
-      const currentTitle = currentEnrollment?.path?.title || 'your current path';
-      alert(`Please complete ${currentTitle} before enrolling in a new one.`);
-      return;
+    if (isEnrolled) {
+      navigate('/employee-courses', { state: { learningPathId: path.id } });
+    } else {
+      onEnroll();
     }
-    onEnroll();
   };
 
   const getDifficultyColor = (difficulty) => {
@@ -120,32 +117,21 @@ const LearningPathCard = ({ path, isEnrolled, currentEnrollment, onEnroll, viewM
           <Button
             onClick={(e) => {
               e.stopPropagation();
-              if (isEnrolled) {
-                navigate('/employee-courses', { state: { learningPathId: path.id } });
-              } else {
-                handleEnrollClick(e);
-              }
+              handleEnrollClick(e);
             }}
-            disabled={!canEnroll && !isEnrolled}
             className={cn(
               "h-10 w-fit rounded-xl font-black text-[10px] uppercase tracking-widest transition-all px-6 shrink-0",
               isEnrolled
                 ? "bg-primary text-white shadow-lg shadow-primary/20"
-                : canEnroll
-                ? "bg-primary text-white hover:bg-primary/90"
-                : "bg-muted text-muted-foreground cursor-not-allowed opacity-50"
+                : "bg-primary text-white hover:bg-primary/90"
             )}
           >
             {isEnrolled ? (
               <span className="flex items-center gap-2">
-                Continue Training <ChevronRight className="h-4 w-4" />
+                View Course <ChevronRight className="h-4 w-4" />
               </span>
-            ) : canEnroll ? (
-              'Start Learning Path'
             ) : (
-              <span className="flex items-center gap-2">
-                <Lock className="h-4 w-4" /> Locked
-              </span>
+              'Enroll Now'
             )}
           </Button>
         </div>

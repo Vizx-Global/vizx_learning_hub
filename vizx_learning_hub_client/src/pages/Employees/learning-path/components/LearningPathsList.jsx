@@ -2,7 +2,7 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import LearningPathCard from './LearningPathCard';
 
-const LearningPathsList = ({ learningPaths, currentEnrollment, onEnroll, viewMode = 'grid' }) => {
+const LearningPathsList = ({ learningPaths, onEnroll, viewMode = 'grid' }) => {
   return (
     <div className={viewMode === 'grid' 
       ? "grid grid-cols-1 md:grid-cols-2 gap-8" 
@@ -19,7 +19,6 @@ const LearningPathsList = ({ learningPaths, currentEnrollment, onEnroll, viewMod
           <LearningPathCard
             path={path}
             isEnrolled={path.isEnrolled}
-            currentEnrollment={currentEnrollment}
             onEnroll={() => onEnroll(path.id)}
             viewMode={viewMode}
           />

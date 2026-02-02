@@ -16,6 +16,8 @@ import AdminSettingsPanel from './components/AdminSettingsPanel';
 import UserSearchAndFilter from './components/UserSearchAndFilter';
 import UserListTable from './components/UserListTable';
 import CreateUserModal from './components/CreateUserModal';
+import { userService } from '../../../api';
+
 
 const UserProfileManagement = () => {
   const navigate = useNavigate();
@@ -47,18 +49,41 @@ const UserProfileManagement = () => {
     setTimeout(() => setError(null), 8000);
   };
 
+  const [learningHistory, setLearningHistory] = useState([]);
+  const [achievements, setAchievements] = useState([]);
+  const [preferences, setPreferences] = useState(null);
+  const [loadingDetails, setLoadingDetails] = useState(false);
+
   // Clear messages
   const clearMessages = () => {
     setError(null);
     setSuccess(null);
   };
 
+  const [totalModules, setTotalModules] = useState(0);
+
   const fetchUsers = async () => {
     try {
       setLoading(true);
       clearMessages();
-      const response = await axiosClient.get('/users/all');
       
+      const [usersRes, modulesRes] = await Promise.all([
+        axiosClient.get('/users/all'),
+        axiosClient.get('/modules')
+      ]);
+      
+      let actualTotalModules = 0;
+      if (modulesRes.data?.data?.total !== undefined) {
+        actualTotalModules = modulesRes.data.data.total;
+      } else if (Array.isArray(modulesRes.data?.data?.modules)) {
+        actualTotalModules = modulesRes.data.data.modules.length;
+      } else if (Array.isArray(modulesRes.data?.data)) {
+        actualTotalModules = modulesRes.data.data.length;
+      }
+      
+      setTotalModules(actualTotalModules);
+
+      const response = usersRes;
       console.log('API Response:', response.data); 
       
       let usersData = [];
@@ -101,9 +126,10 @@ const UserProfileManagement = () => {
           }) : 'Unknown',
           avatar: user.avatar || `https://ui-avatars.com/api/?name=${user.firstName || 'User'}+${user.lastName || 'Name'}&size=150&background=random`,
           lastActive: user.lastActive || new Date().toISOString().split('T')[0],
-          overallProgress: calculateOverallProgress(user),
+          overallProgress: calculateOverallProgress(user, actualTotalModules),
+          totalModules: actualTotalModules,
           stats: {
-            completedModules: user.completedModules || 0,
+            completedModules: user._count?.moduleProgress || user.completedModules || 0,
             totalPoints: user.totalPoints || 0,
             currentStreak: user.currentStreak || 0,
             achievements: user.achievementsCount || 0
@@ -148,8 +174,10 @@ const UserProfileManagement = () => {
     return 'Beginner';
   };
 
-  const calculateOverallProgress = (user) => {
-    const baseProgress = Math.min(100, ((user.completedModules || 0) / 30) * 100);
+  const calculateOverallProgress = (user, total) => {
+    const completed = user._count?.moduleProgress || user.completedModules || 0;
+    if (!total || total <= 0) return 0;
+    const baseProgress = Math.min(100, (completed / total) * 100);
     return Math.round(baseProgress);
   };
 
@@ -317,9 +345,90 @@ const UserProfileManagement = () => {
     }
   };
 
+
+
   useEffect(() => {
     fetchUsers();
   }, []);
+
+  const fetchUserDetails = async (userId) => {
+    try {
+      setLoadingDetails(true);
+      const [historyRes, achievementsRes, preferencesRes] = await Promise.all([
+        userService.getUserLearningHistory(userId),
+        userService.getUserAchievements(userId),
+        userService.getUserPreferences(userId)
+      ]);
+
+      // Map History
+      const mappedHistory = (historyRes.data.data || []).map(item => ({
+        id: item.id,
+        title: item.learningPath?.title || 'Unknown Path',
+        status: item.status.charAt(0).toUpperCase() + item.status.slice(1).toLowerCase().replace('_', ' '),
+        progress: Math.round(item.progress || 0),
+        timeSpent: Math.round((item.totalTimeSpent || 0) / 60),
+        lastAccessed: item.lastAccessedAt ? new Date(item.lastAccessedAt).toLocaleDateString() : 'N/A',
+        startDate: item.startedAt ? new Date(item.startedAt).toLocaleDateString() : 'N/A',
+        estimatedTime: item.learningPath?.estimatedHours || 0,
+        difficulty: item.learningPath?.difficulty || 'N/A',
+        category: item.learningPath?.category || 'N/A',
+        score: item.finalScore || 0,
+        attempts: 1,
+        pointsEarned: item.moduleProgress?.reduce((sum, mp) => sum + (mp.pointsEarned || 0), 0) || 0,
+        certificate: !!item.certificateId,
+        quizScores: { average: item.moduleProgress?.filter(mp => mp.quizScore).reduce((sum, mp, _, arr) => sum + (mp.quizScore / arr.length), 0) || 0 }
+      }));
+
+      // Map Achievements
+      const mappedAchievements = (achievementsRes.data.data || []).map(ua => ({
+        id: ua.achievementId,
+        title: ua.achievement.title,
+        description: ua.achievement.description,
+        type: ua.achievement.type.toLowerCase(),
+        rarity: ua.achievement.rarity.toLowerCase(),
+        points: ua.achievement.points,
+        earned: ua.isUnlocked,
+        earnedDate: ua.earnedAt ? new Date(ua.earnedAt).toLocaleDateString() : null,
+        isRecent: ua.earnedAt ? (new Date() - new Date(ua.earnedAt)) < 7 * 24 * 60 * 60 * 1000 : false,
+        progress: ua.progress ? { current: ua.progress, required: 100 } : null
+      }));
+
+      // Map Preferences
+      const p = preferencesRes.data.data;
+      const mappedPreferences = {
+        learning: {
+          style: p.learningStyle || 'visual',
+          difficulty: p.preferredDifficulty || 'intermediate',
+          sessionDuration: p.sessionDuration || 60,
+          dailyGoal: p.dailyGoalMinutes || 120,
+          autoAdvance: p.autoAdvance ?? true
+        },
+        notifications: {
+          email: p.emailNotifications ?? true,
+          push: p.pushNotifications ?? true,
+          achievements: p.achievementAlerts ?? true,
+          weeklyReport: p.weeklyReport ?? true
+        },
+        privacy: {
+          shareProgress: p.shareProgress ?? true,
+          leaderboards: p.showOnLeaderboard ?? true,
+          analytics: p.allowAnalytics ?? true
+        },
+        interface: {
+          theme: p.theme || 'light',
+          language: p.language || 'en'
+        }
+      };
+
+      setLearningHistory(mappedHistory);
+      setAchievements(mappedAchievements);
+      setPreferences(mappedPreferences);
+    } catch (err) {
+      console.error('Error fetching user details:', err);
+    } finally {
+      setLoadingDetails(false);
+    }
+  };
 
   useEffect(() => {
     let filtered = users;
@@ -416,9 +525,11 @@ const UserProfileManagement = () => {
     }
   };
 
+
   const handleUserClick = (user) => {
     setSelectedUser(user);
     setActiveTab('profile');
+    fetchUserDetails(user.id);
   };
 
   const handleSaveProfile = () => {
@@ -426,9 +537,37 @@ const UserProfileManagement = () => {
     showSuccess('Profile updated successfully');
   };
 
-  const handleSavePreferences = (newPreferences) => {
-    console.log('Saving preferences:', newPreferences);
-    showSuccess('Preferences saved successfully');
+
+  const handleSavePreferences = async (newPreferences) => {
+    try {
+      setLoadingDetails(true);
+      // Flatten back for server
+      const flattened = {
+        learningStyle: newPreferences.learning.style,
+        preferredDifficulty: newPreferences.learning.difficulty,
+        sessionDuration: newPreferences.learning.sessionDuration,
+        dailyGoalMinutes: newPreferences.learning.dailyGoal,
+        autoAdvance: newPreferences.learning.autoAdvance,
+        emailNotifications: newPreferences.notifications.email,
+        pushNotifications: newPreferences.notifications.push,
+        achievementAlerts: newPreferences.notifications.achievements,
+        weeklyReport: newPreferences.notifications.weeklyReport,
+        shareProgress: newPreferences.privacy.shareProgress,
+        showOnLeaderboard: newPreferences.privacy.leaderboards,
+        allowAnalytics: newPreferences.privacy.analytics,
+        theme: newPreferences.interface.theme,
+        language: newPreferences.interface.language
+      };
+
+      await userService.updateUserPreferences(selectedUser.id, flattened);
+      setPreferences(newPreferences);
+      showSuccess('Preferences saved successfully');
+    } catch (err) {
+      console.error('Error saving preferences:', err);
+      showError('Failed to save preferences');
+    } finally {
+      setLoadingDetails(false);
+    }
   };
 
   const handleUpdateUser = async (updatedUser) => {
@@ -682,25 +821,53 @@ const UserProfileManagement = () => {
                   />
                 </div>
                 <div className="lg:col-span-3">
-                  <LearningHistoryPanel learningHistory={mockLearningHistory} />
+                  {loadingDetails ? (
+                    <div className="flex items-center justify-center p-12 bg-card rounded-lg border border-border">
+                      <Icon name="Loader" className="animate-spin h-6 w-6 text-primary mr-2" />
+                      <span>Loading learning history...</span>
+                    </div>
+                  ) : (
+                    <LearningHistoryPanel learningHistory={learningHistory} />
+                  )}
                 </div>
               </div>
             )}
 
             {activeTab === 'history' && selectedUser && (
-              <LearningHistoryPanel learningHistory={mockLearningHistory} />
+              loadingDetails ? (
+                <div className="flex items-center justify-center p-12">
+                   <Icon name="Loader" className="animate-spin h-8 w-8 text-primary" />
+                </div>
+              ) : (
+                <LearningHistoryPanel learningHistory={learningHistory} />
+              )
             )}
 
             {activeTab === 'achievements' && selectedUser && (
-              <AchievementsPanel achievements={mockAchievements} />
+              loadingDetails ? (
+                <div className="flex items-center justify-center p-12">
+                   <Icon name="Loader" className="animate-spin h-8 w-8 text-primary" />
+                </div>
+              ) : (
+                <AchievementsPanel achievements={achievements} />
+              )
             )}
 
             {activeTab === 'preferences' && selectedUser && (
-              <PreferencesPanel
-                preferences={mockPreferences}
-                onSave={handleSavePreferences}
-              />
+              loadingDetails ? (
+                <div className="flex items-center justify-center p-12">
+                   <Icon name="Loader" className="animate-spin h-8 w-8 text-primary" />
+                </div>
+              ) : (
+                <PreferencesPanel
+                  preferences={preferences || mockPreferences}
+                  onSave={handleSavePreferences}
+                />
+              )
             )}
+
+
+
 
             {activeTab === 'admin' && selectedUser && (
               <AdminSettingsPanel

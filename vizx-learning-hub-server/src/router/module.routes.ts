@@ -55,6 +55,7 @@ router.get('/learning-path/:learningPathId', moduleController.getModulesByLearni
 router.get('/content-type/:contentType', moduleController.getModulesByContentType);
 router.get('/:id', moduleController.getModuleById);
 router.get('/', validate(moduleQuerySchema, 'query'), moduleController.getAllModules);
+router.get('/stats', authorize('ADMIN', 'MANAGER'), moduleController.getModuleStats);
 router.get('/:id/validate', moduleController.validateModule);
 router.get('/learning-path/:learningPathId/count', moduleController.getModuleCountByLearningPath);
 

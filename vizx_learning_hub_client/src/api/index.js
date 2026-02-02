@@ -6,6 +6,7 @@ import enrollmentService from './enrollmentService';
 import moduleProgressService from './moduleProgressService';
 import verificationService from './verificationService';
 import quizService from './quizService';
+import achievementService from './achievementService';
 
 export {
     authService,
@@ -15,5 +16,6 @@ export {
     enrollmentService,
     moduleProgressService,
     verificationService,
-    quizService
+    quizService,
+    achievementService
 };

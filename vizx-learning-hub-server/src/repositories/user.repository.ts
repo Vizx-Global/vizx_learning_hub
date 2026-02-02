@@ -220,6 +220,13 @@ export class UserRepository {
           currentStreak: true,
           createdAt: true,
           lastLoginAt: true,
+          _count: {
+            select: {
+              moduleProgress: {
+                where: { status: 'COMPLETED' }
+              }
+            }
+          },
           manager: {
             select: {
               id: true,

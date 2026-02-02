@@ -1,6 +1,7 @@
 import { PrismaClient, ProgressStatus, ActivityType, EnrollmentStatus } from '@prisma/client';
 import { CreateEnrollmentDto, UpdateEnrollmentDto, QueryEnrollmentDto } from '../repositories/enrollment.dto';
 import { NotFoundError, BadRequestError, ConflictError } from '../utils/errors';
+import { NotificationService } from './notification.service';
 
 export class EnrollmentService {
   private prisma: PrismaClient;
@@ -23,38 +24,7 @@ export class EnrollmentService {
       throw new BadRequestError('Cannot enroll in a learning path that is not published');
     }
 
-    // Enforce "1 learning path at a go"
-    const activeEnrollments = await this.prisma.enrollment.count({
-      where: { 
-        userId, 
-        status: { in: [EnrollmentStatus.ENROLLED, EnrollmentStatus.IN_PROGRESS] } 
-      }
-    });
-
-    if (activeEnrollments > 0) {
-      throw new BadRequestError('You already have an active learning path. Complete or drop it before starting a new one.');
-    }
-
-    // Check prerequisites
-    const lpDetails = await this.prisma.learningPath.findUnique({
-      where: { id: data.learningPathId },
-      select: { prerequisites: true }
-    });
-
-    if (lpDetails?.prerequisites && Array.isArray(lpDetails.prerequisites) && lpDetails.prerequisites.length > 0) {
-      const prereqIds = lpDetails.prerequisites as string[];
-      const completedPrereqs = await this.prisma.enrollment.count({
-        where: {
-          userId,
-          learningPathId: { in: prereqIds },
-          status: EnrollmentStatus.COMPLETED
-        }
-      });
-
-      if (completedPrereqs < prereqIds.length) {
-        throw new BadRequestError('You must complete the prerequisite learning paths first.');
-      }
-    }
+    // Prerequisite checks removed as per user request
 
     const existingEnrollment = await this.prisma.enrollment.findUnique({
       where: {
@@ -151,6 +121,9 @@ export class EnrollmentService {
       where: { id: data.learningPathId },
       data: { enrollmentCount: { increment: 1 } }
     });
+
+    // Send notification
+    await NotificationService.notifyEnrollment(userId, enrollment.learningPath.title);
 
     return enrollment;
   }

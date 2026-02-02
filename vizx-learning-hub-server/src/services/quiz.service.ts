@@ -84,6 +84,10 @@ export class QuizService {
       completedAt: new Date()
     });
 
+    const { StreakService } = require('./streak.service');
+    const streakService = new StreakService(prisma);
+    await streakService.updateStreakImplementation(userId);
+
     if (passed) await this.handleQuizPassed(userId, quiz, enrollmentId, score);
 
     return attempt;

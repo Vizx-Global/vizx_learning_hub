@@ -59,7 +59,7 @@ const Select = React.forwardRef(({ className, options = [], value, defaultValue,
     <div className={cn("relative", className)}>
       {label && <label htmlFor={selectId} className={cn("text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 mb-2 block", error ? "text-destructive" : "text-foreground")}>{label}{required && <span className="text-destructive ml-1">*</span>}</label>}
       <div className="relative">
-        <button ref={ref} id={selectId} type="button" className={cn("flex h-10 w-full items-center justify-between rounded-md border border-input bg-white text-black px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50", error && "border-destructive focus:ring-destructive", !hasValue && "text-muted-foreground")} onClick={handleToggle} disabled={disabled} aria-expanded={isOpen} aria-haspopup="listbox" {...props}>
+        <button ref={ref} id={selectId} type="button" className={cn("flex h-10 w-full items-center justify-between rounded-md border border-input bg-background text-foreground px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50", error && "border-destructive focus:ring-destructive", !hasValue && "text-muted-foreground")} onClick={handleToggle} disabled={disabled} aria-expanded={isOpen} aria-haspopup="listbox" {...props}>
           <span className="truncate">{getSelectedDisplay()}</span>
           <div className="flex items-center gap-1">
             {loading && <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" /></svg>}
@@ -72,7 +72,7 @@ const Select = React.forwardRef(({ className, options = [], value, defaultValue,
           {options?.map(option => <option key={option?.value} value={option?.value}>{option?.label}</option>)}
         </select>
         {isOpen && (
-          <div className="absolute z-50 w-full mt-1 bg-white text-black border border-border rounded-md shadow-md">
+          <div className="absolute z-50 w-full mt-1 bg-background text-foreground border border-border rounded-md shadow-md">
             {searchable && (
               <div className="p-2 border-b">
                 <div className="relative">

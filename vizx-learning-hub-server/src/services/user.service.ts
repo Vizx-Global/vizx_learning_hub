@@ -1,6 +1,7 @@
 import { UserRepository } from '../repositories/user.repository';
 import { UserRole, UserStatus } from '@prisma/client';
 import prisma from '../database';
+import { NotificationService } from './notification.service';
 
 export interface UserFilters {
   role?: UserRole;
@@ -71,6 +72,10 @@ export class UserService {
     await prisma.auditLog.create({
       data: { userId: updatedBy, action: 'user.status_updated', entity: 'User', entityId: id, oldValue: { status: existingUser.status }, newValue: { status } },
     });
+
+    // Send notification
+    await NotificationService.notifyStatusUpdate(id, status);
+
     return user;
   }
 
@@ -115,7 +120,7 @@ export class UserService {
     if (!query || query.trim().length < 2) throw new Error('Query too short');
     return await prisma.user.findMany({
       where: {
-        OR: [{ firstName: { contains: query, mode: 'insensitive' } }, { lastName: { contains: query, mode: 'insensitive' } }, { email: { contains: query, mode: 'insensitive' } }, { employeeId: { contains: query, mode: 'insensitive' } }],
+        OR: [{ firstName: { contains: query } }, { lastName: { contains: query } }, { email: { contains: query } }, { employeeId: { contains: query } }],
       },
       take: limit,
       select: { id: true, firstName: true, lastName: true, email: true, employeeId: true, department: true, jobTitle: true, role: true, status: true },
@@ -138,5 +143,72 @@ export class UserService {
       user: { id: user.id, firstName: user.firstName, lastName: user.lastName, totalPoints: user.totalPoints, currentLevel: user.currentLevel, currentStreak: user.currentStreak },
       summary: { enrollmentsCount: enrolled, completedModules: completed, achievementsCount: achievements, recentActivity: recent },
     };
+  }
+
+  static async getUserLearningHistory(userId: string) {
+    return await prisma.enrollment.findMany({
+      where: { userId },
+      include: {
+        learningPath: {
+          select: { id: true, title: true, category: true, difficulty: true, estimatedHours: true }
+        },
+        moduleProgress: {
+          include: {
+            module: {
+              select: { id: true, title: true }
+            }
+          }
+        }
+      },
+      orderBy: { lastAccessedAt: 'desc' }
+    });
+  }
+
+  static async getUserAchievements(userId: string) {
+    return await prisma.userAchievement.findMany({
+      where: { userId },
+      include: {
+        achievement: true
+      },
+      orderBy: { earnedAt: 'desc' }
+    });
+  }
+
+  static async getUserPreferences(userId: string) {
+    const preferences = await prisma.userPreference.findUnique({
+      where: { userId }
+    });
+    
+    if (!preferences) {
+      return {
+        learningStyle: 'visual',
+        preferredDifficulty: 'intermediate',
+        sessionDuration: 60,
+        dailyGoalMinutes: 120,
+        autoAdvance: true,
+        emailNotifications: true,
+        pushNotifications: true,
+        achievementAlerts: true,
+        weeklyReport: true,
+        shareProgress: true,
+        showOnLeaderboard: true,
+        allowAnalytics: true,
+        theme: 'light',
+        language: 'en'
+      };
+    }
+    
+    return preferences;
+  }
+
+  static async updateUserPreferences(userId: string, data: any) {
+    return await prisma.userPreference.upsert({
+      where: { userId },
+      create: {
+        userId,
+        ...data
+      },
+      update: data
+    });
   }
 }

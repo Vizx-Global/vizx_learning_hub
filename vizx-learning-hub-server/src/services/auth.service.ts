@@ -4,6 +4,7 @@ import { JWTUtil, TokenPayload } from '../utils/jwt.util';
 import { UserRole, UserStatus, ActivityType } from '@prisma/client';
 import prisma from '../database';
 import { EmailService } from '../utils/email.utils';
+import { NotificationService } from './notification.service';
 import crypto from 'crypto';
 
 export interface AuthResponse {
@@ -98,6 +99,9 @@ export class AuthService {
 
     await EmailService.sendWelcomeEmail(user.email, user.firstName, userData.password, UserRole.ADMIN);
 
+    // Send in-app notification
+    await NotificationService.notifyWelcome(user.id, user.firstName);
+
     await prisma.auditLog.create({
       data: {
         userId: user.id,
@@ -174,6 +178,9 @@ export class AuthService {
     await this.storeRefreshToken(user.id, refreshToken);
 
     await EmailService.sendWelcomeEmail(user.email, user.firstName, userData.password, UserRole.EMPLOYEE);
+
+    // Send in-app notification
+    await NotificationService.notifyWelcome(user.id, user.firstName);
 
     await prisma.auditLog.create({
       data: {

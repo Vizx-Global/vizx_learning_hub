@@ -23,7 +23,7 @@ const LearningPaths = () => {
   const { user } = useAuth();
   const [learningPaths, setLearningPaths] = useState([]);
   const [filteredPaths, setFilteredPaths] = useState([]);
-  const [currentEnrollment, setCurrentEnrollment] = useState(null);
+  // No longer need currentEnrollment state
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [selectedDifficulty, setSelectedDifficulty] = useState('All');
@@ -47,26 +47,29 @@ const LearningPaths = () => {
 
       const enrolledPathIds = new Set(enrollments.map(e => e.learningPathId));
       
-      const mappedPaths = paths.map(path => ({
-        ...path,
-        isEnrolled: enrolledPathIds.has(path.id),
-        totalModules: path.modules?.length || path.totalModules || 0,
-        estimatedHours: path.estimatedHours || 0,
-        pointsReward: path.pointsReward || 0,
-        enrolledCount: path.enrollmentCount || path.enrolledCount || 0,
-        completionRate: path.completionRate || '0%',
-        category: path.category || 'General',
-        difficulty: path.difficulty 
-          ? path.difficulty.charAt(0).toUpperCase() + path.difficulty.slice(1).toLowerCase() 
-          : 'Beginner',
-        modules: path.modules || []
-      }));
+      const mappedPaths = paths.map(path => {
+        const enrollment = enrollments.find(e => String(e.learningPathId) === String(path.id));
+        return {
+          ...path,
+          isEnrolled: !!enrollment,
+          progress: enrollment?.progress || 0,
+          totalModules: path.modules?.length || path.totalModules || 0,
+          estimatedHours: path.estimatedHours || 0,
+          pointsReward: path.pointsReward || 0,
+          enrolledCount: path.enrollmentCount || path.enrolledCount || 0,
+          completionRate: enrollment ? `${Math.round(enrollment.progress)}%` : '0%',
+          category: path.category || 'General',
+          difficulty: path.difficulty 
+            ? path.difficulty.charAt(0).toUpperCase() + path.difficulty.slice(1).toLowerCase() 
+            : 'Beginner',
+          modules: path.modules || []
+        };
+      });
 
       setLearningPaths(mappedPaths);
       setFilteredPaths(mappedPaths);
 
-      const activeEnrollment = enrollments.find(e => e.status === 'IN_PROGRESS' || e.status === 'ENROLLED');
-      setCurrentEnrollment(activeEnrollment || null);
+      // No longer need singular activeEnrollment tracking
 
     } catch (error) {
       console.error("Failed to fetch learning path data:", error);
@@ -105,16 +108,6 @@ const LearningPaths = () => {
   const difficulties = ['All', 'Beginner', 'Intermediate', 'Advanced'];
 
   const handleEnroll = async (pathId) => {
-    // Check if user is already enrolled in a different path
-    if (currentEnrollment) {
-      Swal.fire({
-        icon: 'warning',
-        title: 'Active Path Found',
-        text: `Please complete "${currentEnrollment.path?.title || 'your current path'}" before enrolling in a new one.`,
-      });
-      return;
-    }
-
     try {
       await enrollmentService.enrollInPath(pathId);
       Swal.fire({
@@ -318,7 +311,6 @@ const LearningPaths = () => {
            ) : (
              <LearningPathsList 
                learningPaths={filteredPaths}
-               currentEnrollment={currentEnrollment}
                onEnroll={handleEnroll}
                viewMode={viewMode}
              />

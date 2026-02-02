@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
-import { Search, Bell, Plus, ChevronDown, Menu, User, LogOut, Eye, CheckCircle, Clock, AlertTriangle, FileText, Settings, Calendar } from 'lucide-react';
+import { useNotifications } from '../../contexts/NotificationContext';
+import { Search, Bell, Plus, ChevronDown, Menu, User, LogOut, Eye, CheckCircle, Clock, AlertTriangle, FileText, Settings, Calendar, Trash2 } from 'lucide-react';
 import { Input } from '../ui/Input';
 import { Button } from '../ui/Button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '../ui/dropdown-menu';
@@ -21,6 +22,7 @@ const Link = ({ href, children, className, onClick, ...props }) => {
 const EmployeeHeader = ({ toggleSidebar }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const { user, logout } = useAuth();
+  const { notifications, unreadCount, markAsRead, markAllAsRead, deleteNotification } = useNotifications();
   const navigate = useNavigate();
 
   const getUserInitials = () => {
@@ -41,16 +43,10 @@ const EmployeeHeader = ({ toggleSidebar }) => {
     { label: 'Submit Report', icon: FileText, href: '/employee-dashboard/reports/new', color: 'from-violet-500 to-purple-500' },
   ];
 
-  const notifications = [
-    { id: 1, title: 'Task Assigned', description: 'New task from your manager', time: '1 hour ago', type: 'info' },
-    { id: 2, title: 'Meeting Reminder', description: 'Team meeting in 30 minutes', time: '2 hours ago', type: 'warning' },
-    { id: 3, title: 'Timesheet Approved', description: 'Last week\'s timesheet has been approved', time: '1 day ago', type: 'success' },
-  ];
-
   const handleSearch = (e) => setSearchQuery(e.target.value);
   const handleKeyDown = (e) => { if (e.key === 'Enter' && searchQuery.trim()) console.log('Searching for:', searchQuery); };
   const handleLogout = async () => { try { await logout(); navigate('/login'); } catch (error) { console.error('Logout failed:', error); } };
-  const handleViewAllNotifications = () => { window.history.pushState({}, '', '/employee-dashboard/notifications'); window.dispatchEvent(new Event('popstate')); };
+  const handleViewAllNotifications = () => { navigate('/employee-notifications'); };
 
   return (
     <header className="sticky px-4 py-4 top-0 z-40 flex h-16 items-center justify-between gap-4 border-b border-border/40 bg-gradient-to-r from-background/95 to-background/90 backdrop-blur-xl supports-[backdrop-filter]:bg-background/80 shadow-sm">
@@ -90,32 +86,58 @@ const EmployeeHeader = ({ toggleSidebar }) => {
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="icon" className="relative h-9 w-9 rounded-lg hover:bg-primary/10">
               <Bell className="h-4.5 w-4.5 text-muted-foreground" />
-              <Badge className="absolute -top-1 -right-1 h-5 w-5 p-0 flex items-center justify-center bg-gradient-to-r from-red-500 to-rose-500 text-white border-2 border-background text-xs font-semibold">{notifications.length}</Badge>
+              {unreadCount > 0 && (
+                <Badge className="absolute -top-1 -right-1 h-5 w-5 p-0 flex items-center justify-center bg-gradient-to-r from-red-500 to-rose-500 text-white border-2 border-background text-xs font-semibold">
+                  {unreadCount > 9 ? '9+' : unreadCount}
+                </Badge>
+              )}
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-80 p-2 rounded-xl border-border/40 shadow-lg backdrop-blur-sm bg-background/95">
             <div className="flex items-center justify-between px-3 py-2">
               <DropdownMenuLabel className="text-xs font-semibold text-muted-foreground/80 p-0">Notifications</DropdownMenuLabel>
-              <Badge className="text-xs px-2 py-0.5 bg-primary/10 text-primary">{notifications.length} New</Badge>
+              <div className="flex gap-2 items-center">
+                {unreadCount > 0 && (
+                  <button onClick={() => markAllAsRead()} className="text-[10px] text-primary hover:underline font-bold uppercase tracking-wider">Mark all as read</button>
+                )}
+                <Badge className="text-xs px-2 py-0.5 bg-primary/10 text-primary">{unreadCount} New</Badge>
+              </div>
             </div>
             <DropdownMenuSeparator className="my-1 bg-border/30" />
-            <div className="max-h-80 overflow-y-auto">
-              {notifications.map((notification) => (
-                <DropdownMenuItem key={notification.id} className="flex flex-col items-start p-3 gap-2 hover:bg-secondary/50 rounded-lg cursor-pointer border-b border-border/20 last:border-0" onClick={() => { console.log('Notification clicked:', notification.id); }}>
-                  <div className="flex items-start justify-between w-full gap-3">
-                    <div className={`h-2 w-2 rounded-full mt-1.5 flex-shrink-0 ${notification.type === 'success' ? 'bg-emerald-500' : notification.type === 'warning' ? 'bg-amber-500' : 'bg-blue-500'}`} />
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between mb-1"><p className="text-sm font-medium truncate">{notification.title}</p><span className="text-xs text-muted-foreground/70 whitespace-nowrap">{notification.time}</span></div>
-                      <p className="text-xs text-muted-foreground/80 leading-relaxed">{notification.description}</p>
+            <div className="max-h-80 overflow-y-auto custom-scrollbar">
+              {notifications?.length > 0 ? (
+                notifications.slice(0, 5).map((notification) => (
+                  <DropdownMenuItem 
+                    key={notification.id} 
+                    className={`flex flex-col items-start p-3 gap-2 hover:bg-secondary/50 rounded-lg cursor-pointer border-b border-border/20 last:border-0 ${notification.status === 'UNREAD' ? 'bg-primary/5' : ''}`}
+                    onClick={() => {
+                      if (notification.status === 'UNREAD') markAsRead(notification.id);
+                      if (notification.actionUrl) navigate(notification.actionUrl);
+                    }}
+                  >
+                    <div className="flex items-start justify-between w-full gap-3">
+                      <div className={`h-2 w-2 rounded-full mt-1.5 flex-shrink-0 ${notification.status === 'UNREAD' ? 'bg-primary' : 'bg-muted-foreground/30'}`} />
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between mb-1">
+                          <p className={`text-sm ${notification.status === 'UNREAD' ? 'font-bold' : 'font-medium'} truncate`}>{notification.title}</p>
+                          <span className="text-[10px] text-muted-foreground/70 whitespace-nowrap">{new Date(notification.createdAt).toLocaleDateString()}</span>
+                        </div>
+                        <p className="text-xs text-muted-foreground/80 leading-relaxed line-clamp-2">{notification.message}</p>
+                      </div>
                     </div>
-                  </div>
-                </DropdownMenuItem>
-              ))}
+                  </DropdownMenuItem>
+                ))
+              ) : (
+                <div className="py-8 text-center text-muted-foreground text-sm">No notifications yet.</div>
+              )}
             </div>
             <DropdownMenuSeparator className="my-1 bg-border/30" />
-            <DropdownMenuItem className="justify-center text-sm font-medium text-primary hover:text-primary/90 cursor-pointer py-2" onClick={handleViewAllNotifications}><Eye className="h-3.5 w-3.5 mr-2" />View all notifications</DropdownMenuItem>
+            <DropdownMenuItem className="justify-center text-sm font-medium text-primary hover:text-primary/90 cursor-pointer py-2" onClick={handleViewAllNotifications}>
+              <Eye className="h-3.5 w-3.5 mr-2" />View all notifications
+            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
+
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" className="relative rounded-xl h-10 px-2 gap-2 hover:bg-primary/10">

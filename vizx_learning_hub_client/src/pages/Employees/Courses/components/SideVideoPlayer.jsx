@@ -27,7 +27,8 @@ import {
   HelpCircle,
   TrendingUp,
   RotateCcw,
-  Lock
+  Lock,
+  Maximize2
 } from 'lucide-react';
 import quizService from '../../../../api/quizService';
 import moduleProgressService from '../../../../api/moduleProgressService';
@@ -35,8 +36,10 @@ import Swal from 'sweetalert2';
 import { Button } from '../../../../components/ui/Button';
 import { Progress } from '../../../../components/ui/Progress';
 import { cn } from '../../../../utils/cn';
+import { useAuth } from '../../../../contexts/AuthContext';
 
 const SideVideoPlayer = ({ module, allModules = [], onClose, onSelectModule }) => {
+  const { checkAuthStatus } = useAuth();
   const [activeTab, setActiveTab] = useState('overview');
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isScrolled, setIsScrolled] = useState(false);
@@ -111,7 +114,11 @@ const SideVideoPlayer = ({ module, allModules = [], onClose, onSelectModule }) =
     try {
       const enrollmentId = moduleProgress?.enrollmentId || module.enrollmentId;
       if (enrollmentId) {
-        await moduleProgressService.markModuleComplete(enrollmentId, module.id);
+        const response = await moduleProgressService.markModuleComplete(enrollmentId, module.id);
+        if (response.data?.success) {
+          setModuleProgress(prev => ({ ...prev, status: 'COMPLETED' }));
+          checkAuthStatus(); // Refresh user points/streak
+        }
       }
       
       if (nextModule) {
@@ -141,9 +148,10 @@ const SideVideoPlayer = ({ module, allModules = [], onClose, onSelectModule }) =
 
   if (!module) return null;
 
-  const currentModuleIndex = allModules.findIndex(m => m.id === module.id);
-  const nextModule = allModules[currentModuleIndex + 1];
-  const prevModule = allModules[currentModuleIndex - 1];
+  const pathModules = allModules.filter(m => m.learningPathId === module.learningPathId);
+  const currentModuleIndex = pathModules.findIndex(m => m.id === module.id);
+  const nextModule = pathModules[currentModuleIndex + 1];
+  const prevModule = pathModules[currentModuleIndex - 1];
 
   return (
     <motion.div
@@ -159,24 +167,32 @@ const SideVideoPlayer = ({ module, allModules = [], onClose, onSelectModule }) =
         
         {/* Cinematic Header (Float/Sticky) */}
         <div className={cn(
-          "absolute top-0 left-0 right-0 z-50 px-6 py-4 flex items-center justify-between transition-all duration-300",
+          "absolute top-0 left-0 right-0 z-50 px-4 md:px-6 py-3 md:py-4 flex items-center justify-between transition-all duration-300",
           (isScrolled || !module.videoUrl) ? "bg-background/80 backdrop-blur-xl border-b border-border shadow-sm" : "bg-gradient-to-b from-black/60 to-transparent text-white"
         )}>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3 md:gap-4 flex-1 min-w-0">
             <Button 
               variant="ghost" 
               size="icon" 
               onClick={onClose}
               className={cn(
-                "rounded-full transition-all",
+                "rounded-full transition-all shrink-0",
                 (isScrolled || !module.videoUrl) ? "hover:bg-muted" : "bg-white/10 hover:bg-white/20 text-white"
               )}
             >
               <X className="h-5 w-5" />
             </Button>
-            <div className="flex flex-col">
-              <h1 className="text-sm font-black tracking-tight leading-none uppercase">{module.title}</h1>
-              <p className="text-[10px] font-bold opacity-60 uppercase tracking-widest mt-1">
+            <div className="flex flex-col min-w-0">
+              <div className="flex items-center gap-2">
+                <h1 className="text-xs md:text-sm font-black tracking-tight leading-none uppercase truncate">{module.title}</h1>
+                {moduleProgress?.status === 'COMPLETED' && (
+                  <div className="flex items-center gap-1 bg-success/20 text-success px-1.5 py-0.5 rounded text-[8px] font-black uppercase tracking-tighter shrink-0 border border-success/30">
+                     <CheckCircle2 className="h-2.5 w-2.5" />
+                     <span>Done</span>
+                  </div>
+                )}
+              </div>
+              <p className="text-[9px] md:text-[10px] font-bold opacity-60 uppercase tracking-widest mt-1 truncate">
                 {module.category || 'Professional Training'}
               </p>
             </div>
@@ -202,8 +218,11 @@ const SideVideoPlayer = ({ module, allModules = [], onClose, onSelectModule }) =
         <div id="learning-content-area" className="flex-1 overflow-y-auto no-scrollbar scroll-smooth pt-0">
           
           {/* Hero Player Area */}
-          <div className="relative aspect-video w-full bg-[#050505] overflow-hidden">
-            {module.videoUrl ? (
+          <div className={cn(
+            "relative w-full bg-[#050505] overflow-hidden transition-all duration-500",
+            module.contentType === 'VIDEO' ? "aspect-video" : "min-h-[400px] md:min-h-[500px]"
+          )}>
+            {module.contentType === 'VIDEO' && module.videoUrl ? (
               <video
                 src={module.videoUrl}
                 poster={module.thumbnailUrl}
@@ -211,17 +230,96 @@ const SideVideoPlayer = ({ module, allModules = [], onClose, onSelectModule }) =
                 autoPlay
                 className="w-full h-full object-contain"
               />
+            ) : module.contentType === 'TEXT' ? (
+              <div className="w-full h-full bg-card p-4 md:p-12 overflow-y-auto custom-scrollbar">
+                <div className="max-w-4xl mx-auto prose prose-invert lg:prose-xl">
+                   <div dangerouslySetInnerHTML={{ __html: module.content }} className="text-foreground/90 font-medium leading-relaxed" />
+                </div>
+              </div>
+            ) : module.documentUrl ? (
+              <div className="w-full h-full flex flex-col bg-slate-900">
+                {/* Advanced Unified Document Viewer */}
+                <div className="flex-1 relative flex flex-col">
+                  {/* Decorative Gradient Overlay for Premium Look */}
+                  <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-transparent to-black/20 pointer-events-none z-10" />
+                  
+                  <div className="flex-1 bg-white overflow-hidden relative">
+                    {module.documentUrl.toLowerCase().endsWith('.pdf') ? (
+                      <iframe 
+                        src={`${module.documentUrl}#toolbar=0&navpanes=0&view=FitH`} 
+                        className="w-full h-full"
+                        title={module.title}
+                      />
+                    ) : (module.documentUrl.includes('localhost') || module.documentUrl.includes('127.0.0.1')) ? (
+                      <div className="w-full h-full flex flex-col items-center justify-center p-12 text-center bg-slate-50">
+                        <div className="w-20 h-20 bg-primary/10 rounded-3xl flex items-center justify-center mb-6">
+                           <FileText className="h-10 w-10 text-primary" />
+                        </div>
+                        <h3 className="text-xl font-black text-slate-900 uppercase tracking-tight mb-2">Local Preview Restricted</h3>
+                        <p className="text-slate-500 text-sm max-w-sm mx-auto leading-relaxed mb-8">
+                          Microsoft Office Viewer cannot access files hosted on your local machine. Please view this {module.documentUrl.split('.').pop()?.toUpperCase()} file directly.
+                        </p>
+                        <Button 
+                          onClick={() => window.open(module.documentUrl, '_blank')}
+                          className="rounded-2xl px-8 h-12 font-bold uppercase tracking-widest text-xs"
+                        >
+                          Open in New Tab
+                        </Button>
+                      </div>
+                    ) : module.documentUrl.toLowerCase().match(/\.(doc|docx|ppt|pptx|xls|xlsx)$/) ? (
+                      <iframe 
+                        src={`https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(module.documentUrl)}&wdAr=1.7777777777777777`}
+                        className="w-full h-full border-none shadow-2xl"
+                        frameBorder="0"
+                        title={module.title}
+                      />
+                    ) : (
+                      <iframe 
+                        src={module.documentUrl} 
+                        className="w-full h-full border-none"
+                        title={module.title}
+                      />
+                    )}
+                  </div>
+                  
+                  {/* Integrated Preview Toolbar */}
+                  <div className="absolute top-20 right-6 z-20 flex flex-col gap-2">
+                     <Button 
+                       variant="secondary" 
+                       size="icon" 
+                       className="rounded-xl bg-black/40 backdrop-blur-xl border-white/10 text-white hover:bg-white/20 transition-all shadow-2xl"
+                       onClick={() => window.open(module.documentUrl, '_blank')}
+                     >
+                        <Maximize2 className="h-4 w-4" />
+                     </Button>
+                  </div>
+                </div>
+              </div>
             ) : (
-              <div className="w-full h-full flex flex-col items-center justify-center space-y-6">
+              <div className="w-full h-full flex flex-col items-center justify-center space-y-6 p-10 bg-gradient-to-br from-[#0a0a0a] to-[#1a1a1a]">
                  <div className="relative">
                    <div className="absolute inset-0 bg-primary/20 blur-3xl rounded-full" />
-                   <div className="relative w-24 h-24 bg-primary/10 rounded-3xl border border-primary/20 flex items-center justify-center animate-pulse">
-                      <Play className="h-10 w-10 text-primary fill-current" />
+                   <div className="relative w-24 h-24 bg-primary/10 rounded-[2rem] border border-primary/20 flex items-center justify-center animate-pulse">
+                      {module.contentType === 'TEXT' ? <FileText className="h-10 w-10 text-primary" /> : 
+                       module.contentType === 'DOCUMENT' ? <Download className="h-10 w-10 text-primary" /> :
+                       <Play className="h-10 w-10 text-primary fill-current" />}
                    </div>
                  </div>
-                 <div className="text-center">
-                    <h2 className="text-white text-xl font-black uppercase tracking-tight">Establishing Connection</h2>
-                    <p className="text-white/40 text-sm font-medium italic mt-1">Preparing your cinematic learning environment...</p>
+                 <div className="text-center max-w-md">
+                    <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 border border-primary/20 mb-4">
+                       <Zap className="h-3 w-3 text-primary" />
+                       <span className="text-[10px] font-black uppercase tracking-widest text-primary">Content Synchronizer</span>
+                    </div>
+                    <h2 className="text-white text-2xl font-black uppercase tracking-tight">
+                       {module.contentType === 'TEXT' ? "Knowledge Synthesis" : 
+                        module.contentType === 'DOCUMENT' ? "Document Initialization" : 
+                        "Establishing Connection"}
+                    </h2>
+                    <p className="text-white/40 text-sm font-medium italic mt-2">
+                       {module.contentType === 'TEXT' ? "Preparing your interactive reading experience..." : 
+                        module.contentType === 'DOCUMENT' ? "Optimizing document for high-fidelity viewing..." :
+                        "Preparing your cinematic learning environment..."}
+                    </p>
                  </div>
               </div>
             )}
@@ -231,7 +329,7 @@ const SideVideoPlayer = ({ module, allModules = [], onClose, onSelectModule }) =
           <div className="max-w-5xl mx-auto px-6 lg:px-12 py-12">
             
             {/* Tab Navigation */}
-            <div className="flex border-b border-border/60 mb-10 gap-10">
+            <div className="flex border-b border-border/60 mb-6 md:mb-10 gap-6 md:gap-10 overflow-x-auto no-scrollbar scroll-smooth">
                {['overview', 'resources', 'discussion', 'notes', ...(quiz ? ['quiz'] : [])].map((tab) => (
                  <button 
                   key={tab}
@@ -264,9 +362,9 @@ const SideVideoPlayer = ({ module, allModules = [], onClose, onSelectModule }) =
                   className="space-y-12"
                 >
                   <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
-                     <div className="md:col-span-3 space-y-6">
-                        <h2 className="text-3xl font-black tracking-tighter text-foreground/90 uppercase">{module.title}</h2>
-                        <p className="text-muted-foreground leading-relaxed text-lg font-medium opacity-80">
+                     <div className="md:col-span-3 space-y-4 md:space-y-6">
+                        <h2 className="text-xl md:text-3xl font-black tracking-tighter text-foreground/90 uppercase">{module.title}</h2>
+                        <p className="text-muted-foreground leading-relaxed text-sm md:text-lg font-medium opacity-80">
                           {module.description || "This course delivers a high-impact learning experience focused on mastering practical industry tools. Engage with the content to unlock new cognitive potential and professional mastery."}
                         </p>
                         
@@ -381,6 +479,7 @@ const SideVideoPlayer = ({ module, allModules = [], onClose, onSelectModule }) =
                             setQuizResults(response.data.data);
                             if (response.data.data.passed) {
                               setQuizCompleted(true);
+                              checkAuthStatus(); // Refresh user points/streak
                               // Refetch summary to update sidebar
                               const enrollmentId = moduleProgress?.enrollmentId || module.enrollmentId;
                               if (enrollmentId) {
@@ -457,27 +556,33 @@ const SideVideoPlayer = ({ module, allModules = [], onClose, onSelectModule }) =
         </div>
 
         {/* Floating Mini Player Footer */}
-        <div className="p-4 bg-background border-t border-border flex items-center justify-between gap-6 relative z-50">
-           <div className="flex items-center gap-4 flex-1">
+        <div className="p-3 md:p-4 bg-background border-t border-border flex items-center justify-between gap-3 md:gap-6 relative z-50">
+           <div className="flex items-center gap-2 md:gap-4 flex-1 min-w-0">
               <Button 
                 variant="outline" 
                 onClick={() => onSelectModule(prevModule)}
                 disabled={!prevModule}
-                className="rounded-xl h-12 px-6 font-black text-[10px] uppercase tracking-widest"
+                className="rounded-xl h-10 md:h-12 px-3 md:px-6 font-black text-[9px] md:text-[10px] uppercase tracking-widest shrink-0"
               >
-                 <ChevronLeft className="h-4 w-4 mr-2" /> Previous
+                 <ChevronLeft className="h-4 w-4 md:mr-2" /> <span className="hidden md:inline">Previous</span>
               </Button>
-              <div className="hidden sm:flex flex-col">
+              <div className="hidden sm:flex flex-col min-w-0">
                  <span className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">Next Evolution</span>
-                 <span className="text-xs font-bold truncate max-w-[200px]">{nextModule?.title || "Complete Pathway"}</span>
+                 <span className="text-xs font-bold truncate max-w-[150px] md:max-w-[200px]">{nextModule?.title || "Complete Pathway"}</span>
               </div>
            </div>
 
            <Button 
              onClick={handleCompleteModule}
-             className="rounded-xl h-14 px-10 font-black text-[11px] uppercase tracking-widest shadow-2xl shadow-primary/30 gap-2 group"
+             className={cn(
+                "rounded-xl h-12 md:h-14 px-6 md:px-10 font-black text-[10px] md:text-[11px] uppercase tracking-widest gap-2 group shrink-0 transition-all",
+                moduleProgress?.status === 'COMPLETED' 
+                  ? "bg-muted text-foreground border border-border" 
+                  : "bg-primary text-white shadow-2xl shadow-primary/30"
+              )}
            >
-              {nextModule ? "Finish & Continue" : "Complete Pathway"}
+              <span className="hidden xs:inline">{moduleProgress?.status === 'COMPLETED' ? (nextModule ? "Next Module" : "Finish") : (nextModule ? "Finish & Continue" : "Complete")}</span>
+              <span className="xs:hidden">{nextModule ? "Next" : "Done"}</span>
               <ChevronRightIcon className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
            </Button>
         </div>
@@ -488,51 +593,74 @@ const SideVideoPlayer = ({ module, allModules = [], onClose, onSelectModule }) =
       */}
       <AnimatePresence>
         {isSidebarOpen && (
-          <motion.div
-            initial={{ x: '100%', width: 0 }}
-            animate={{ x: 0, width: 380 }}
-            exit={{ x: '100%', width: 0 }}
-            className="hidden lg:flex flex-col bg-card border-l border-border h-full overflow-hidden shadow-[-10px_0_30px_rgba(0,0,0,0.05)]"
-          >
-            <div className="p-6 border-b border-border flex items-center justify-between bg-muted/30">
-               <div>
-                  <h3 className="text-sm font-black uppercase tracking-tight">Pathway Catalog</h3>
-                  <p className="text-[10px] font-bold text-muted-foreground uppercase mt-1 tracking-widest">
-                    {allModules.length} Modules in total
-                  </p>
-               </div>
-               <div className="p-2 bg-background rounded-lg border border-border shadow-sm">
-                  <ListVideo className="h-4 w-4 text-primary" />
-               </div>
-            </div>
+          <>
+            {/* Mobile Overlay */}
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsSidebarOpen(false)}
+              className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[60] lg:hidden"
+            />
+            
+            <motion.div
+              initial={{ x: '100%' }}
+              animate={{ x: 0 }}
+              exit={{ x: '100%' }}
+              transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+              className="fixed lg:relative inset-y-0 right-0 w-[85%] sm:w-[380px] lg:w-[380px] z-[70] lg:z-0 flex flex-col bg-card border-l border-border h-full overflow-hidden shadow-2xl lg:shadow-[-10px_0_30px_rgba(0,0,0,0.05)]"
+            >
+              <div className="p-6 border-b border-border flex items-center justify-between bg-muted/30">
+                 <div>
+                    <h3 className="text-sm font-black uppercase tracking-tight">Pathway Catalog</h3>
+                    <p className="text-[10px] font-bold text-muted-foreground uppercase mt-1 tracking-widest">
+                      {allModules.length} Modules in total
+                    </p>
+                 </div>
+                 <div className="flex items-center gap-2">
+                    <Button variant="ghost" size="icon" className="lg:hidden" onClick={() => setIsSidebarOpen(false)}>
+                       <X className="h-4 w-4" />
+                    </Button>
+                    <div className="p-2 bg-background rounded-lg border border-border shadow-sm">
+                       <ListVideo className="h-4 w-4 text-primary" />
+                    </div>
+                 </div>
+              </div>
 
             <div className="flex-1 overflow-y-auto no-scrollbar py-4 px-2 space-y-1">
-                {allModules.map((m, idx) => {
+                {pathModules.map((m, idx) => {
                   const isActive = m.id === module.id;
                   const summaryItem = enrollmentSummary.find(s => s.moduleId === m.id);
-                  const isCompleted = summaryItem?.status === 'COMPLETED';
+                  const isCompleted = summaryItem?.status === 'COMPLETED' || (summaryItem?.progress?.progress || 0) >= 100;
                   
-                  // Sequential access logic: 
-                  // Locked if (not first module) AND (previous module not completed)
-                  const isLocked = idx > 0 && (() => {
-                    const prevModule = allModules[idx - 1];
-                    const prevSummary = enrollmentSummary.find(s => s.moduleId === prevModule.id);
-                    return prevSummary?.status !== 'COMPLETED';
-                  })();
+                  const isPathCompleted = pathModules.every(pm => {
+                    const item = enrollmentSummary.find(s => s.moduleId === pm.id);
+                    return item?.status === 'COMPLETED' || (item?.progress?.progress || 0) >= 100;
+                  });
+
+                  const isLocked = isPathCompleted ? false : (
+                    idx > 0 && 
+                    !isCompleted && 
+                    (() => {
+                      const prevModule = pathModules[idx - 1];
+                      const prevSummary = enrollmentSummary.find(s => s.moduleId === prevModule.id);
+                      return !(prevSummary?.status === 'COMPLETED' || (prevSummary?.progress?.progress || 0) >= 100);
+                    })()
+                  );
 
                   return (
                     <button
-                     key={m.id}
-                     onClick={() => !isLocked && onSelectModule(m)}
-                     disabled={isLocked}
-                     className={cn(
-                       "w-full text-left p-4 rounded-2xl transition-all group flex gap-4",
-                       isActive 
-                         ? "bg-primary text-white shadow-xl shadow-primary/20" 
-                         : isLocked
-                           ? "opacity-50 cursor-not-allowed bg-muted/20"
-                           : "hover:bg-muted"
-                     )}
+                      key={m.id}
+                      onClick={() => !isLocked && onSelectModule(m)}
+                      disabled={isLocked}
+                      className={cn(
+                        "w-full text-left p-4 rounded-2xl transition-all group flex gap-4",
+                        isActive 
+                          ? "bg-primary text-white shadow-xl shadow-primary/20" 
+                          : isLocked
+                            ? "opacity-50 cursor-not-allowed bg-muted/20"
+                            : "hover:bg-muted"
+                      )}
                     >
                       <div className={cn(
                         "w-10 h-10 rounded-xl flex items-center justify-center font-black text-xs shrink-0 transition-all shadow-sm",
@@ -544,34 +672,34 @@ const SideVideoPlayer = ({ module, allModules = [], onClose, onSelectModule }) =
                       <div className="flex-1 min-w-0">
                          <div className="flex items-center gap-2 mb-1">
                             <span className={cn(
-                              "text-[9px] font-black uppercase tracking-widest",
-                              isActive ? "text-white/70" : isLocked ? "text-muted-foreground" : "text-primary"
+                               "text-[9px] font-black uppercase tracking-widest",
+                               isActive ? "text-white/70" : isLocked ? "text-muted-foreground" : "text-primary"
                             )}>
-                              Module {idx + 1}
+                               Module {idx + 1}
                             </span>
                             {isCompleted && <CheckCircle2 className="h-3 w-3 text-success" />}
                             {isLocked && <Lock className="h-2.5 w-2.5 text-muted-foreground/50" />}
                          </div>
                          <h4 className={cn(
-                           "text-xs font-black tracking-tight truncate",
-                           isActive ? "text-white" : isLocked ? "text-muted-foreground" : "text-foreground"
+                            "text-xs font-black tracking-tight truncate",
+                            isActive ? "text-white" : isLocked ? "text-muted-foreground" : "text-foreground"
                          )}>
-                           {m.title}
+                            {m.title}
                          </h4>
                          
                          {!isLocked && m.contentType === 'QUIZ' && (
-                           <div className="flex items-center gap-1.5 mt-1">
-                             <span className={cn(
-                               "text-[8px] font-black uppercase px-1.5 py-0.5 rounded",
-                               isActive 
-                                 ? "bg-white/20 text-white" 
-                                 : isCompleted 
-                                   ? "bg-success/10 text-success" 
-                                   : "bg-warning/10 text-warning"
-                             )}>
-                               {isCompleted ? 'Quiz Passed' : summaryItem?.progress?.attempts > 0 ? 'Quiz Failed' : 'Quiz Required'}
-                             </span>
-                           </div>
+                            <div className="flex items-center gap-1.5 mt-1">
+                              <span className={cn(
+                                "text-[8px] font-black uppercase px-1.5 py-0.5 rounded",
+                                isActive 
+                                  ? "bg-white/20 text-white" 
+                                  : isCompleted 
+                                    ? "bg-success/10 text-success" 
+                                    : "bg-warning/10 text-warning"
+                              )}>
+                                {isCompleted ? 'Quiz Passed' : summaryItem?.progress?.attempts > 0 ? 'Quiz Failed' : 'Quiz Required'}
+                              </span>
+                            </div>
                          )}
 
                          <div className="flex items-center gap-3 mt-1.5">
@@ -588,8 +716,7 @@ const SideVideoPlayer = ({ module, allModules = [], onClose, onSelectModule }) =
                     </button>
                   );
                 })}
-            </div>
-
+              </div>
             <div className="p-6 bg-muted/20 border-t border-border">
                <div className="bg-card p-4 rounded-2xl border border-border shadow-sm flex items-center gap-4">
                   <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
@@ -601,7 +728,8 @@ const SideVideoPlayer = ({ module, allModules = [], onClose, onSelectModule }) =
                   </div>
                </div>
             </div>
-          </motion.div>
+            </motion.div>
+          </>
         )}
       </AnimatePresence>
 
@@ -635,7 +763,7 @@ const QuizViewer = ({ quiz, onComplete }) => {
         />
       </div>
 
-      <div className="p-8 lg:p-12 space-y-10">
+      <div className="p-5 md:p-8 lg:p-12 space-y-8 md:space-y-10">
         <div className="flex justify-between items-center">
           <span className="text-[10px] font-black uppercase tracking-[0.2em] text-primary bg-primary/10 px-3 py-1 rounded-full">
             Question {currentQuestionIndex + 1} of {questions.length}
@@ -646,8 +774,8 @@ const QuizViewer = ({ quiz, onComplete }) => {
           </div>
         </div>
 
-        <div className="space-y-8">
-          <h3 className="text-2xl font-black leading-tight tracking-tighter text-foreground/90 uppercase">
+        <div className="space-y-6 md:space-y-8">
+          <h3 className="text-lg md:text-2xl font-black leading-tight tracking-tighter text-foreground/90 uppercase">
             {currentQuestion?.text}
           </h3>
 
@@ -691,17 +819,17 @@ const QuizViewer = ({ quiz, onComplete }) => {
             <Button
               disabled={Object.keys(answers).length < questions.length}
               onClick={() => onComplete(answers)}
-              className="rounded-xl h-14 px-10 font-black uppercase tracking-widest shadow-xl shadow-primary/20"
+              className="rounded-xl h-12 md:h-14 px-6 md:px-10 font-black text-[10px] md:text-11px uppercase tracking-widest shadow-xl shadow-primary/20"
             >
-              Submit Examination
+              Submit
             </Button>
           ) : (
             <Button
               disabled={answers[currentQuestionIndex] === undefined}
               onClick={() => setCurrentQuestionIndex(prev => prev + 1)}
-              className="rounded-xl h-14 px-10 font-black uppercase tracking-widest gap-2"
+              className="rounded-xl h-12 md:h-14 px-6 md:px-10 font-black text-[10px] md:text-11px uppercase tracking-widest gap-2"
             >
-              Next Question <ChevronRightIcon className="h-4 w-4" />
+              Next <ChevronRightIcon className="h-4 w-4" />
             </Button>
           )}
         </div>

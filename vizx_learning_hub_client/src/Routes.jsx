@@ -24,6 +24,7 @@ import EmployeeLearningPathDetail from "./pages/Employees/learning-path/componen
 import EmployeeLeaderboards from "./pages/Employees/Community/Leaderboard";
 import EmployeeGames from "./pages/Employees/Games/Games";
 import EmployeeProfile from "./pages/Employees/User-Profile/Profile";
+import Notifications from "./pages/Employees/Notification/Notifications";
 import { ThemeProvider } from "./components/ThemeProvider";
 
 const Routes = () => {
@@ -56,6 +57,7 @@ const Routes = () => {
               <Route path="/employee-learning-paths/:id" element={<EmployeeLearningPathDetail />} />
               <Route path="/employee-leaderboards" element={<EmployeeLeaderboards />} />
               <Route path="/employee-games" element={<EmployeeGames />} />
+              <Route path="/employee-notifications" element={<Notifications />} />
               <Route path="/employee-profile" element={<EmployeeProfile />} />
             </Route>
             <Route path="*" element={<NotFound />} />

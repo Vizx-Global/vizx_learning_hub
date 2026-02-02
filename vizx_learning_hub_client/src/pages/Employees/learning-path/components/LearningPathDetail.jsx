@@ -11,7 +11,9 @@ import {
   PlayCircle, 
   CheckCircle,
   FileText,
-  Target
+  Target,
+  Lock,
+  ChevronRight
 } from 'lucide-react';
 import { Button } from '../../../../components/ui/Button';
 import learningPathService from '../../../../api/learningPathService';
@@ -71,6 +73,7 @@ const LearningPathDetail = () => {
       setPath({
         ...pathData,
         isEnrolled,
+        prerequisiteDetails: pathData.prerequisiteDetails || [],
         totalModules: modulesData.length,
         pointsReward: pathData.pointsReward || 0,
         estimatedHours: pathData.estimatedHours || 0,
@@ -271,6 +274,42 @@ const LearningPathDetail = () => {
                </div>
             </div>
 
+            {/* Prerequisites */}
+            {path.prerequisiteDetails && path.prerequisiteDetails.length > 0 && (
+              <div className="bg-card rounded-3xl border border-border p-8 shadow-sm">
+                 <h2 className="text-2xl font-bold tracking-tight mb-6 flex items-center gap-3">
+                    <Target className="h-6 w-6 text-primary" />
+                    Prerequisites
+                 </h2>
+                 <div className="space-y-4">
+                     {path.prerequisiteDetails.map((prereq) => (
+                      <div key={prereq.id} className="flex items-center justify-between p-4 bg-muted/30 rounded-2xl border border-border">
+                         <div className="flex items-center gap-4">
+                            <div className="w-10 h-10 rounded-xl bg-background flex items-center justify-center border border-border">
+                               <BookOpen className="h-5 w-5 text-muted-foreground" />
+                            </div>
+                            <div>
+                               <div className="flex items-center gap-2">
+                                  <p className="font-bold text-sm">{prereq.title}</p>
+                               </div>
+                               <p className="text-[10px] text-muted-foreground uppercase font-black tracking-widest">Recommended Knowledge</p>
+                            </div>
+                         </div>
+                         <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            onClick={() => navigate(`/employee-learning-paths/${prereq.id}`)}
+                            className="text-xs font-bold gap-2 text-primary hover:bg-primary/10"
+                         >
+                            View Path
+                            <ChevronRight className="h-3 w-3" />
+                         </Button>
+                      </div>
+                    ))}
+                 </div>
+              </div>
+            )}
+
             {/* What you'll learn */}
             <div className="bg-card rounded-3xl border border-border p-8 shadow-sm">
                <h2 className="text-2xl font-bold tracking-tight mb-6">Learning Objectives</h2>
@@ -296,7 +335,7 @@ const LearningPathDetail = () => {
                {path.isEnrolled ? (
                  <Button 
                    className="w-full h-14 rounded-2xl font-black text-sm uppercase tracking-widest shadow-xl shadow-primary/20 gap-2"
-                   onClick={() => navigate('/employee-courses')}
+                   onClick={() => navigate('/employee-courses', { state: { learningPathId: path.id } })}
                  >
                    <PlayCircle className="h-5 w-5" />
                    Continue Learning
@@ -310,7 +349,7 @@ const LearningPathDetail = () => {
                    {enrolling ? (
                       <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
                    ) : (
-                      'Enroll in Path'
+                      'Enroll Now'
                    )}
                  </Button>
                )}

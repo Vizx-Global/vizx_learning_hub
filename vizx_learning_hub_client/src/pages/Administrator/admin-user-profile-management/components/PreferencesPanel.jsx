@@ -7,6 +7,10 @@ const PreferencesPanel = ({ preferences, onSave }) => {
   const [localPreferences, setLocalPreferences] = useState(preferences);
   const [hasChanges, setHasChanges] = useState(false);
 
+  React.useEffect(() => {
+    setLocalPreferences(preferences);
+  }, [preferences]);
+
   const handlePreferenceChange = (category, key, value) => {
     setLocalPreferences(prev => ({
       ...prev,

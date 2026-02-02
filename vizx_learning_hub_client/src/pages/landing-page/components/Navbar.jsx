@@ -13,7 +13,7 @@ const Navigation = () => {
   const navItems = [
     { href: "/", label: "Home" },
     { 
-      href: "/browse", label: "Browse Learning Paths", 
+      href: "/browse", label: "Browse", 
       subMenu: [
         { href: "/category/ai-ml", label: "AI & Machine Learning" },
         { href: "/category/development", label: "Prompt Engineering" },
@@ -22,7 +22,9 @@ const Navigation = () => {
         { href: "/categories", label: "All Categories" }
       ]
     },
-    { href: "/how-it-works", label: "How It Works" },
+    { href: "/#features", label: "Features" },
+    { href: "/#courses", label: "Courses" },
+    { href: "/#how-it-works", label: "How It Works" },
     { href: "/enterprise", label: "For Companies" },
   ];
 

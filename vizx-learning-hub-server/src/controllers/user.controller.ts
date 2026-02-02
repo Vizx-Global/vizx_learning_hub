@@ -6,7 +6,8 @@ import { asyncHandler } from '../utils/asyncHandler';
 export class UserController {
   static getUserById = asyncHandler(async (req: AuthRequest, res: Response) => {
     const { id } = req.params;
-    const user = await UserService.getUserById(id);
+
+    const user = await UserService.getUserById(id!);
 
     res.json({
       success: true,
@@ -45,7 +46,8 @@ export class UserController {
 
   static updateUser = asyncHandler(async (req: AuthRequest, res: Response) => {
     const { id } = req.params;
-    const updatedUser = await UserService.updateUser(id, req.body, req.user!.userId);
+
+    const updatedUser = await UserService.updateUser(id!, req.body, req.user!.userId);
 
     res.json({
       success: true,
@@ -56,7 +58,8 @@ export class UserController {
 
   static deleteUser = asyncHandler(async (req: AuthRequest, res: Response) => {
     const { id } = req.params;
-    const result = await UserService.deleteUser(id, req.user!.userId);
+
+    const result = await UserService.deleteUser(id!, req.user!.userId);
 
     res.json({
       success: true,
@@ -77,7 +80,8 @@ export class UserController {
     const { id } = req.params;
     const { status } = req.body;
 
-    const updatedUser = await UserService.updateUserStatus(id, status, req.user!.userId);
+
+    const updatedUser = await UserService.updateUserStatus(id!, status, req.user!.userId);
 
     res.json({
       success: true,
@@ -90,12 +94,57 @@ export class UserController {
     const { id } = req.params;
     const { role } = req.body;
 
-    const updatedUser = await UserService.updateUserRole(id, role, req.user!.userId);
+
+    const updatedUser = await UserService.updateUserRole(id!, role, req.user!.userId);
 
     res.json({
       success: true,
       message: 'User role updated successfully',
       data: { user: updatedUser },
     });
+  });
+
+  static getUserLearningHistory = asyncHandler(async (req: AuthRequest, res: Response) => {
+    const { id } = req.params;
+
+    if (req.user!.userId !== id && !['ADMIN', 'MANAGER'].includes(req.user!.role)) {
+      return res.status(403).json({ success: false, message: 'Insufficient permissions' });
+    }
+
+    const history = await UserService.getUserLearningHistory(id!);
+    return res.json({ success: true, data: history });
+  });
+
+  static getUserAchievements = asyncHandler(async (req: AuthRequest, res: Response) => {
+    const { id } = req.params;
+
+    if (req.user!.userId !== id && !['ADMIN', 'MANAGER'].includes(req.user!.role)) {
+      return res.status(403).json({ success: false, message: 'Insufficient permissions' });
+    }
+
+    const achievements = await UserService.getUserAchievements(id!);
+    return res.json({ success: true, data: achievements });
+  });
+
+  static getUserPreferences = asyncHandler(async (req: AuthRequest, res: Response) => {
+    const { id } = req.params;
+
+    if (req.user!.userId !== id && !['ADMIN', 'MANAGER'].includes(req.user!.role)) {
+      return res.status(403).json({ success: false, message: 'Insufficient permissions' });
+    }
+
+    const preferences = await UserService.getUserPreferences(id!);
+    return res.json({ success: true, data: preferences });
+  });
+
+  static updateUserPreferences = asyncHandler(async (req: AuthRequest, res: Response) => {
+    const { id } = req.params;
+
+    if (req.user!.userId !== id && !['ADMIN', 'MANAGER'].includes(req.user!.role)) {
+      return res.status(403).json({ success: false, message: 'Insufficient permissions' });
+    }
+
+    const preferences = await UserService.updateUserPreferences(id!, req.body);
+    return res.json({ success: true, message: 'Preferences updated successfully', data: preferences });
   });
 }

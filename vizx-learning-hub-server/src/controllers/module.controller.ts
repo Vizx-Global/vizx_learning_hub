@@ -168,6 +168,14 @@ export class ModuleController {
     ).send(res);
   });
 
+  getModuleStats = asyncHandler(async (req: AuthRequest, res: Response) => {
+    const stats = await this.moduleService.getModuleStats();
+    new SuccessResponse(
+      'Module statistics retrieved successfully',
+      stats
+    ).send(res);
+  });
+
   getModulesByContentType = asyncHandler(async (req: AuthRequest, res: Response) => {
     const { contentType } = req.params;
     const { learningPathId } = req.query;

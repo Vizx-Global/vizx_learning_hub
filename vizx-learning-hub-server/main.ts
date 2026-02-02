@@ -16,6 +16,8 @@ import enrollmentRoutes from './src/router/enrollment.routes';
 import moduleProgressRoutes from './src/router/module-progress.routes';
 import verificationRoutes from './src/router/verification.routes';
 import quizRoutes from './src/router/quiz.routes';
+import achievementRoutes from './src/router/achievement.routes';
+import notificationRoutes from './src/router/notification.routes';
 
 dotenv.config();
 
@@ -71,6 +73,9 @@ app.use('/api/v1/enrollments', enrollmentRoutes);
 app.use('/api/v1/module-progress', moduleProgressRoutes);
 app.use('/api/v1/verification', verificationRoutes);
 app.use('/api/v1/quizzes', quizRoutes);
+app.use('/api/v1/achievements', achievementRoutes);
+app.use('/api/v1/notifications', notificationRoutes);
+app.use('/api/v1/leaderboard', require('./src/router/leaderboard.routes').default);
 
 app.use((req, res) => res.status(404).json({ success: false, message: `Route ${req.method} ${req.originalUrl} not found` }));
 

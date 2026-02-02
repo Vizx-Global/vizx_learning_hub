@@ -1,4 +1,5 @@
 import { PrismaClient, ProgressStatus, ActivityType, EnrollmentStatus } from '@prisma/client';
+import { NotificationService } from './notification.service';
 import { ModuleRepository } from '../repositories/module.repository';
 import { 
   UpdateModuleProgressDto, 
@@ -80,6 +81,9 @@ export class ModuleProgressService {
           pointsEarned: updateData.pointsEarned || 0
         }
       });
+      
+      // Send notification
+      await NotificationService.notifyModuleCompletion(userId, module.title, module.completionPoints || 0);
     }
 
     const moduleProgress = await this.prisma.moduleProgress.upsert({
@@ -88,6 +92,13 @@ export class ModuleProgressService {
       create: { userId, moduleId, enrollmentId, status: data.status || ProgressStatus.NOT_STARTED, progress: data.progress || 0, timeSpent: data.timeSpent || 0, lastAccessedAt: new Date(), ...data },
       include: { module: { select: { id: true, title: true, orderIndex: true, estimatedMinutes: true, contentType: true, thumbnailUrl: true } } }
     });
+
+    if (data.status === ProgressStatus.COMPLETED) {
+      // Lazy load/instantiate StreakService to avoid circular dependency issues if any, although unlikely here
+      const { StreakService } = require('./streak.service');
+      const streakService = new StreakService(this.prisma);
+      await streakService.updateStreakImplementation(userId);
+    }
 
     await this.updateEnrollmentProgress(enrollmentId, userId);
     return moduleProgress;
@@ -147,10 +158,19 @@ export class ModuleProgressService {
     
     if (moduleProgress.length === 0) return null;
 
-    const required = moduleProgress.filter(mp => mp.module?.requiresCompletion);
+    // Calculate progress as average of all modules' progress
+    const totalModules = moduleProgress.length; // Note: this assumes we fetched all modules for the path. 
+    // Ideally we should compare against the actual module count from learningPath, but for now we use what we have tracked.
+    // Better safely: use the percentage sum.
+    
+    // We need to know the Total Modules in the path to calculate correct average.
+    const modulesCount = await ModuleRepository.countByLearningPathId(enrollment.learningPathId);
+    
     let percentage = 0;
-    if (required.length > 0) percentage = (required.filter(mp => mp.status === ProgressStatus.COMPLETED).length / required.length) * 100;
-    else percentage = (moduleProgress.filter(mp => mp.status === ProgressStatus.COMPLETED).length / moduleProgress.length) * 100;
+    if (modulesCount > 0) {
+       const currentSum = moduleProgress.reduce((acc, mp) => acc + (mp.progress || 0), 0);
+       percentage = currentSum / modulesCount;
+    }
 
     let newStatus: EnrollmentStatus = EnrollmentStatus.ENROLLED;
     if (percentage > 0 && percentage < 100) newStatus = EnrollmentStatus.IN_PROGRESS;
@@ -181,6 +201,9 @@ export class ModuleProgressService {
           pointsEarned: points
         }
       });
+
+      // Send notification
+      await NotificationService.notifyPathCompletion(userId, enrollment.learningPath.title);
     }
 
     return await this.prisma.enrollment.update({
@@ -199,18 +222,41 @@ export class ModuleProgressService {
 
   async getUserProgressOverview(userId: string) {
     const enrollments = await this.prisma.enrollment.findMany({
-      where: { userId, status: { in: [EnrollmentStatus.ENROLLED, EnrollmentStatus.IN_PROGRESS] } },
+      where: { userId, status: { in: [EnrollmentStatus.ENROLLED, EnrollmentStatus.IN_PROGRESS, EnrollmentStatus.COMPLETED] } },
       include: { learningPath: { select: { id: true, title: true, estimatedHours: true, thumbnailUrl: true } }, moduleProgress: { include: { module: { select: { id: true, requiresCompletion: true } } } } }
     });
 
     const overview = await Promise.all(enrollments.map(async (e) => {
       const modules = await ModuleRepository.findByLearningPathId(e.learningPathId);
       const required = modules.filter(m => m.requiresCompletion);
-      const completed = e.moduleProgress.filter(mp => mp.status === ProgressStatus.COMPLETED).length;
-      const completedRequired = e.moduleProgress.filter(mp => modules.find(m => m.id === mp.moduleId)?.requiresCompletion && mp.status === ProgressStatus.COMPLETED).length;
+      // Calculate progress based on the average progress of ALL modules
+      // This is more granular and rewarding than just counting "Completed" binaries
+      const totalModules = modules.length;
+      let percentage = 0;
+      
+      if (totalModules > 0) {
+        // Map progress for each module
+        const totalProgressSum = modules.reduce((sum, m) => {
+          const mp = e.moduleProgress.find(p => p.moduleId === m.id);
+          return sum + (mp?.progress || 0);
+        }, 0);
+        
+        percentage = totalProgressSum / totalModules;
+      }
 
-      let percentage = (required.length > 0) ? (completedRequired / required.length) * 100 : (modules.length > 0 ? (completed / modules.length) * 100 : 0);
-      return { enrollmentId: e.id, learningPath: e.learningPath, status: e.status, progress: e.progress, calculatedProgress: parseFloat(percentage.toFixed(2)), completedModules: completed, totalModules: modules.length, totalTimeSpent: e.moduleProgress.reduce((sum, mp) => sum + mp.timeSpent, 0), lastActivityAt: e.lastActivityAt };
+      const completed = e.moduleProgress.filter(mp => mp.status === ProgressStatus.COMPLETED).length;
+
+      return { 
+        enrollmentId: e.id, 
+        learningPath: e.learningPath, 
+        status: e.status, 
+        progress: e.progress, 
+        calculatedProgress: parseFloat(percentage.toFixed(2)), 
+        completedModules: completed, 
+        totalModules: modules.length, 
+        totalTimeSpent: e.moduleProgress.reduce((sum, mp) => sum + mp.timeSpent, 0), 
+        lastActivityAt: e.lastActivityAt 
+      };
     }));
 
     return {

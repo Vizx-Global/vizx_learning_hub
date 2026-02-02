@@ -5,6 +5,7 @@ import { ChevronDown, ChevronRight, LogOut, Settings, Bell, HelpCircle, LayoutDa
 import { Button } from '../ui/Button';
 import { cn } from '../../utils/cn';
 import { useAuth } from '../../contexts/AuthContext';
+import { useNotifications } from '../../contexts/NotificationContext';
 
 const employeeNavItems = [
   { title: 'Dashboard', href: '/employee-dashboard', icon: LayoutDashboard },
@@ -12,6 +13,7 @@ const employeeNavItems = [
   { title: 'Learning Paths', href: '/employee-learning-paths', icon: Compass },
   { title: 'Leaderboards', href: '/employee-leaderboards', icon: Trophy },
   { title: 'Learning Games', href: '/employee-games', icon: Gamepad2 },
+  { title: 'Notifications', href: '/employee-notifications', icon: Bell, showBadge: true },
   { title: 'Profile Settings', href: '/employee-profile', icon: Settings },
 ];
 
@@ -19,6 +21,7 @@ const EmployeeSidebar = ({ isOpen = true, setIsOpen }) => {
   const location = useLocation();
   const navigate = useNavigate();
   const { logout, user } = useAuth();
+  const { unreadCount } = useNotifications();
   const pathname = location.pathname;
   const [isHovering, setIsHovering] = useState(false);
   const [openDropdowns, setOpenDropdowns] = useState(() => {
@@ -127,6 +130,11 @@ const EmployeeSidebar = ({ isOpen = true, setIsOpen }) => {
                   <motion.div className="absolute inset-0 bg-gradient-to-r from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" initial={false} />
                   <motion.div className={cn('h-7 w-7 rounded-md flex items-center justify-center transition-all duration-200 relative z-10', isItemActive ? 'bg-primary/10 text-primary shadow-sm' : 'text-muted-foreground group-hover:text-primary/80 group-hover:bg-primary/5')} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}><item.icon className="h-3.5 w-3.5" /></motion.div>
                   <AnimatePresence>{isExpanded && <motion.span initial={{ opacity: 0, width: 0 }} animate={{ opacity: 1, width: 'auto' }} exit={{ opacity: 0, width: 0 }} className="whitespace-nowrap overflow-hidden tracking-wide relative z-10">{item.title}</motion.span>}</AnimatePresence>
+                  {item.showBadge && unreadCount > 0 && (
+                    <div className={cn("ml-auto bg-primary text-primary-foreground text-[10px] font-bold h-4 w-4 rounded-full flex items-center justify-center relative z-10", !isExpanded && "absolute top-1 right-1")}>
+                      {unreadCount > 9 ? '9+' : unreadCount}
+                    </div>
+                  )}
                 </a>
               )}
             </div>

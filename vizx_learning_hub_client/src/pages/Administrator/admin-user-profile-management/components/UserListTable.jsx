@@ -45,7 +45,8 @@ const UserListTable = ({
       level: user?.level || 'Beginner',
       avatar: user?.avatar || '',
       lastActive: user?.lastActive || user?.lastLoginAt || 'Never',
-      overallProgress: user?.overallProgress || 0,
+      overallProgress: user?.overallProgress ?? 0,
+      totalModules: user?.totalModules ?? 0,
       currentLevel: user?.currentLevel || 1,
       stats: safeUserStats(user)
     };
@@ -333,6 +334,10 @@ const UserListTable = ({
                       <span className="text-sm font-mono text-foreground min-w-[3rem] text-right">
                         {user.overallProgress}%
                       </span>
+                    </div>
+                    <div className="text-[10px] text-muted-foreground mt-1 flex justify-between px-1">
+                       <span className="font-medium uppercase tracking-tighter">Modules</span>
+                       <span className="font-bold opacity-80">{user.stats.completedModules}<span className="opacity-50 font-normal">/{user.totalModules}</span></span>
                     </div>
                   </td>
                   <td className="px-4 py-3">

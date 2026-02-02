@@ -6,16 +6,17 @@ const NotificationList = ({
   onEdit, 
   onDelete, 
   onView, 
-  onDuplicate 
+  onDuplicate,
+  isLoading
 }) => {
   const getStatusBadge = (status) => {
     const badges = {
-      draft: 'bg-muted text-muted-foreground',
-      scheduled: 'bg-warning/10 text-warning',
-      sent: 'bg-success/10 text-success',
-      failed: 'bg-destructive/10 text-destructive'
+      UNREAD: 'bg-primary/10 text-primary',
+      READ: 'bg-muted text-muted-foreground',
+      ARCHIVED: 'bg-warning/10 text-warning',
+      DELETED: 'bg-destructive/10 text-destructive'
     };
-    return badges[status] || badges.draft;
+    return badges[status] || badges.UNREAD;
   };
 
   const getTypeIcon = (type) => {
@@ -23,12 +24,24 @@ const NotificationList = ({
       email: 'Mail',
       push: 'Bell',
       'in-app': 'MessageSquare',
-      sms: 'MessageSquare'
+      sms: 'MessageSquare',
+      SYSTEM: 'ShieldAlert',
+      ACHIEVEMENT: 'Award',
+      WELCOME: 'UserPlus'
     };
     return icons[type] || 'Bell';
   };
 
-  if (notifications.length === 0) {
+  if (isLoading) {
+    return (
+      <div className="bg-card border border-border rounded-lg p-12 text-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+        <p className="text-sm text-muted-foreground">Loading notifications...</p>
+      </div>
+    );
+  }
+
+  if (!Array.isArray(notifications) || notifications.length === 0) {
     return (
       <div className="bg-card border border-border rounded-lg p-12 text-center">
         <Icon name="Bell" size={48} className="text-muted-foreground mx-auto mb-4" />
@@ -41,17 +54,15 @@ const NotificationList = ({
   }
 
   return (
-    <div className="bg-card border border-border rounded-lg overflow-hidden">
+    <div className="bg-card border border-border rounded-lg overflow-hidden shadow-sm">
       <div className="overflow-x-auto">
         <table className="w-full">
           <thead className="bg-muted/30 border-b border-border">
             <tr>
               <th className="text-left p-4 font-semibold text-foreground">Notification</th>
               <th className="text-left p-4 font-semibold text-foreground">Type</th>
-              <th className="text-left p-4 font-semibold text-foreground">Audience</th>
               <th className="text-left p-4 font-semibold text-foreground">Status</th>
-              <th className="text-left p-4 font-semibold text-foreground">Scheduled</th>
-              <th className="text-left p-4 font-semibold text-foreground">Delivery</th>
+              <th className="text-left p-4 font-semibold text-foreground">Date</th>
               <th className="text-left p-4 font-semibold text-foreground">Actions</th>
             </tr>
           </thead>
@@ -75,72 +86,34 @@ const NotificationList = ({
                       className="text-muted-foreground" 
                     />
                     <span className="text-sm text-foreground capitalize">
-                      {notification.type}
+                      {notification.type?.toLowerCase()}
                     </span>
                   </div>
                 </td>
                 <td className="p-4">
-                  <div className="flex items-center gap-2">
-                    <Icon name="Users" size={16} className="text-muted-foreground" />
-                    <span className="text-sm text-foreground">{notification.recipients}</span>
-                  </div>
-                </td>
-                <td className="p-4">
-                  <span className={`px-2 py-1 rounded-full text-xs font-semibold ${getStatusBadge(notification.status)}`}>
+                  <span className={`px-2 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${getStatusBadge(notification.status)}`}>
                     {notification.status}
                   </span>
                 </td>
                 <td className="p-4">
-                  <div className="text-sm text-foreground">{notification.scheduledDate}</div>
-                  <div className="text-xs text-muted-foreground">{notification.scheduledTime}</div>
-                </td>
-                <td className="p-4">
-                  {notification.status === 'sent' && (
-                    <div>
-                      <div className="text-sm font-semibold text-success">
-                        {notification.deliveryRate}%
-                      </div>
-                      <div className="text-xs text-muted-foreground">
-                        {notification.delivered}/{notification.recipients} delivered
-                      </div>
-                    </div>
-                  )}
-                  {notification.status === 'scheduled' && (
-                    <div className="text-sm text-muted-foreground">Pending</div>
-                  )}
-                  {notification.status === 'draft' && (
-                    <div className="text-sm text-muted-foreground">-</div>
-                  )}
+                  <div className="text-sm text-foreground">{new Date(notification.createdAt).toLocaleDateString()}</div>
+                  <div className="text-xs text-muted-foreground">{new Date(notification.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
                 </td>
                 <td className="p-4">
                   <div className="flex items-center gap-2">
                     <button
                       onClick={() => onView(notification.id)}
-                      className="p-1 hover:bg-accent rounded transition-colors"
+                      className="p-1.5 hover:bg-accent rounded-lg transition-colors group"
                       title="View"
                     >
-                      <Icon name="Eye" size={18} className="text-muted-foreground" />
-                    </button>
-                    <button
-                      onClick={() => onEdit(notification.id)}
-                      className="p-1 hover:bg-accent rounded transition-colors"
-                      title="Edit"
-                    >
-                      <Icon name="Edit" size={18} className="text-muted-foreground" />
-                    </button>
-                    <button
-                      onClick={() => onDuplicate(notification.id)}
-                      className="p-1 hover:bg-accent rounded transition-colors"
-                      title="Duplicate"
-                    >
-                      <Icon name="Copy" size={18} className="text-muted-foreground" />
+                      <Icon name="Eye" size={16} className="text-muted-foreground group-hover:text-primary" />
                     </button>
                     <button
                       onClick={() => onDelete(notification.id)}
-                      className="p-1 hover:bg-accent rounded transition-colors"
+                      className="p-1.5 hover:bg-destructive/10 rounded-lg transition-colors group"
                       title="Delete"
                     >
-                      <Icon name="Trash" size={18} className="text-destructive" />
+                      <Icon name="Trash" size={16} className="text-muted-foreground group-hover:text-destructive" />
                     </button>
                   </div>
                 </td>
