@@ -15,10 +15,9 @@ COPY . .
 # Build the application
 # We pass build args for environment variables that Vite needs at build time
 ARG VITE_API_BASE_URL=http://localhost:8080
-ARG VITE_GOOGLE_CLIENT_ID=22795732656-36ee1vmrg2pdmuimiil8netufbav85op.apps.googleusercontent.com
 
 ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
-ENV VITE_GOOGLE_CLIENT_ID=$VITE_GOOGLE_CLIENT_ID
+
 
 RUN npm run build
 
