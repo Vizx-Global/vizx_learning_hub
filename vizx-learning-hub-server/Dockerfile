@@ -11,8 +11,12 @@ COPY package*.json ./
 # Install dependencies
 RUN npm install
 
+
 # Copy source code
 COPY . .
+
+
+RUN npm run build
 
 # Generate Prisma client
 # Since the schema is in a capitalized directory 'Prisma', we specify it
