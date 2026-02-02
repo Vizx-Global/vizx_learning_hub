@@ -7,7 +7,7 @@ services:
       context: ./vizx-learning-hub-server
       dockerfile: Dockerfile
     ports:
-      - "8080"
+      - "3000"
    
     volumes:
       - ./vizx-learning-hub-server/uploads:/app/uploads
