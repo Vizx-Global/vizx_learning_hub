@@ -21,8 +21,6 @@ const moduleService = new ModuleService();
 const moduleController = new ModuleController(moduleService);
 const fileUploadController = new FileUploadController(moduleService);
 
-router.use(authenticate);
-
 const parseModuleFormData = (req: any, res: any, next: any) => {
   try {
     const jsonFields = ['prerequisites', 'learningObjectives', 'tags', 'resources', 'attachments', 'keyConcepts'];
@@ -51,13 +49,18 @@ const parseModuleFormData = (req: any, res: any, next: any) => {
   }
 };
 
+// Public Access
 router.get('/learning-path/:learningPathId', moduleController.getModulesByLearningPath);
 router.get('/content-type/:contentType', moduleController.getModulesByContentType);
 router.get('/:id', moduleController.getModuleById);
 router.get('/', validate(moduleQuerySchema, 'query'), moduleController.getAllModules);
+router.get('/learning-path/:learningPathId/count', moduleController.getModuleCountByLearningPath);
+
+router.use(authenticate);
+
+// Protected routes
 router.get('/stats', authorize('ADMIN', 'MANAGER'), moduleController.getModuleStats);
 router.get('/:id/validate', moduleController.validateModule);
-router.get('/learning-path/:learningPathId/count', moduleController.getModuleCountByLearningPath);
 
 router.post('/upload/files', authorize('ADMIN', 'MANAGER', 'CONTENT_CREATOR'), uploadMultipleFiles, fileUploadController.uploadFiles);
 router.post('/upload/thumbnail', authorize('ADMIN', 'MANAGER', 'CONTENT_CREATOR'), uploadSingleFile('thumbnail'), fileUploadController.uploadThumbnail);

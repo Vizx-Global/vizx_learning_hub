@@ -141,7 +141,13 @@ const EmployeeHeader = ({ toggleSidebar }) => {
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" className="relative rounded-xl h-10 px-2 gap-2 hover:bg-primary/10">
-              <div className="h-8 w-8 rounded-full bg-primary flex items-center justify-center text-white font-semibold text-sm shadow-sm">{userInitials}</div>
+              <div className="h-8 w-8 rounded-full bg-primary flex items-center justify-center text-white font-semibold text-sm shadow-sm overflow-hidden">
+                {user?.avatar ? (
+                  <img src={user.avatar} alt="Profile" className="h-full w-full object-cover" />
+                ) : (
+                  userInitials
+                )}
+              </div>
               <div className="hidden md:flex flex-col items-start"><span className="text-sm font-medium">{user?.firstName ? `${user.firstName} ${user.lastName}` : user?.email || 'User'}</span><span className="text-xs text-muted-foreground/70">{user?.jobTitle || 'Employee'}</span></div>
               <ChevronDown className="hidden md:block h-3.5 w-3.5 text-muted-foreground/70" />
             </Button>
@@ -149,12 +155,18 @@ const EmployeeHeader = ({ toggleSidebar }) => {
           <DropdownMenuContent align="end" className="w-56 p-2 rounded-xl border-border/40 shadow-lg backdrop-blur-sm bg-background/95">
             <div className="px-3 py-2.5">
               <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-full bg-primary flex items-center justify-center text-white font-semibold text-sm shadow-sm">{userInitials}</div>
+                <div className="h-10 w-10 rounded-full bg-primary flex items-center justify-center text-white font-semibold text-sm shadow-sm overflow-hidden">
+                   {user?.avatar ? (
+                      <img src={user.avatar} alt="Profile" className="h-full w-full object-cover" />
+                    ) : (
+                      userInitials
+                    )}
+                </div>
                 <div className="flex flex-col"><span className="text-sm font-medium">{user?.firstName ? `${user.firstName} ${user.lastName}` : user?.email || 'User'}</span><span className="text-xs text-muted-foreground/70">{user?.email || 'No email'}</span></div>
               </div>
             </div>
             <DropdownMenuSeparator className="my-1 bg-border/30" />
-            <DropdownMenuItem className="p-2.5 rounded-lg hover:bg-secondary/50 focus:bg-secondary/50 cursor-pointer gap-3"><User className="h-4 w-4 text-muted-foreground" /><Link href="/employee-dashboard/profile" className="w-full cursor-pointer text-sm">My Profile</Link></DropdownMenuItem>
+            <DropdownMenuItem className="p-2.5 rounded-lg hover:bg-secondary/50 focus:bg-secondary/50 cursor-pointer gap-3"><User className="h-4 w-4 text-muted-foreground" /><Link href="/employee-profile" className="w-full cursor-pointer text-sm">My Profile</Link></DropdownMenuItem>
             <DropdownMenuItem className="p-2.5 rounded-lg hover:bg-secondary/50 focus:bg-secondary/50 cursor-pointer gap-3"><Settings className="h-4 w-4 text-muted-foreground" /><Link href="/employee-dashboard/settings" className="w-full cursor-pointer text-sm">Settings</Link></DropdownMenuItem>
             <DropdownMenuItem className="p-2.5 rounded-lg hover:bg-secondary/50 focus:bg-secondary/50 cursor-pointer gap-3"><Calendar className="h-4 w-4 text-muted-foreground" /><Link href="/employee-dashboard/attendance" className="w-full cursor-pointer text-sm">Attendance</Link></DropdownMenuItem>
             <DropdownMenuSeparator className="my-1 bg-border/30" />

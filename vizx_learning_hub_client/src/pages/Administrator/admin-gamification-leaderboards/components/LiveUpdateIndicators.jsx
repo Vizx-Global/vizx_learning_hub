@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import Icon from '../../../../components/AppIcon';
 
-const LiveUpdateIndicators = ({ isConnected = true, lastUpdate = null, updateCount = 0, onReconnect }) => {
+const LiveUpdateIndicators = ({ isConnected = true, lastUpdate = null, updateCount = 0, onReconnect, recentActivities = [] }) => {
   const [connectionStatus, setConnectionStatus] = useState('connected');
   const [recentUpdates, setRecentUpdates] = useState([]);
 
@@ -61,10 +61,23 @@ const LiveUpdateIndicators = ({ isConnected = true, lastUpdate = null, updateCou
       </div>
       <div className="mt-4 pt-4 border-t border-border">
         <h4 className="font-medium text-foreground text-sm mb-2">Live Activity</h4>
-        <div className="space-y-1">
-          <div className="flex items-center gap-2 text-xs"><Icon name="TrendingUp" size={12} className="text-success" /><span className="text-muted-foreground">Sarah Chen moved up 3 positions</span></div>
-          <div className="flex items-center gap-2 text-xs"><Icon name="Award" size={12} className="text-warning" /><span className="text-muted-foreground">New achievement unlocked by Mike Johnson</span></div>
-          <div className="flex items-center gap-2 text-xs"><Icon name="Flame" size={12} className="text-orange-500" /><span className="text-muted-foreground">Emma Wilson extended streak to 15 days</span></div>
+        <div className="space-y-2">
+          {recentActivities?.length > 0 ? (
+            recentActivities.slice(0, 3).map((activity, idx) => (
+              <div key={idx} className="flex items-center gap-2 text-xs">
+                <Icon 
+                  name={activity.type === 'streak' ? 'Flame' : activity.type === 'competition' ? 'Trophy' : 'Award'} 
+                  size={12} 
+                  className={activity.type === 'streak' ? 'text-orange-500' : 'text-primary'} 
+                />
+                <span className="text-muted-foreground truncate">
+                  {activity.userName} earned {activity.title}
+                </span>
+              </div>
+            ))
+          ) : (
+            <div className="text-xs text-muted-foreground text-center py-2">No recent activity</div>
+          )}
         </div>
       </div>
     </div>

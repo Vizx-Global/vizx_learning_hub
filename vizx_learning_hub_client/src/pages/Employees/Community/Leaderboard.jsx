@@ -91,7 +91,8 @@ export default function Leaderboards() {
 
   useEffect(() => {
     if (activeTab === 'Departmental' && currentUser?.department) {
-      setFilteredUsers(users.filter(u => u.department === currentUser.department));
+      const userDept = typeof currentUser.department === 'string' ? currentUser.department : currentUser.department?.name;
+      setFilteredUsers(users.filter(u => u.department === userDept));
     } else {
       setFilteredUsers(users);
     }

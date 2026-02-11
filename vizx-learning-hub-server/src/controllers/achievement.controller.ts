@@ -31,4 +31,10 @@ export class AchievementController {
     await AchievementService.deleteAchievement(id!);
     return new SuccessResponse('Achievement deleted successfully').send(res);
   });
+
+  static getRecentAchievements = asyncHandler(async (req: Request, res: Response) => {
+    const limit = parseInt(req.query.limit as string) || 10;
+    const achievements = await AchievementService.getRecentAchievements(limit);
+    return new SuccessResponse('Recent achievements retrieved successfully', achievements).send(res);
+  });
 }

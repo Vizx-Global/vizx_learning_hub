@@ -42,7 +42,12 @@ const Footer = () => {
       <div className="container mx-auto px-4 py-12">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
           <div>
-            <img src="https://res.cloudinary.com/dvkt0lsqb/image/upload/v1767653109/vizx_academy_upy2x1.jpg" alt="Vizx Academy Logo" className="h-10 w-auto mb-4" />
+            {/* Desktop Logo */}
+            <img src="https://res.cloudinary.com/dvkt0lsqb/image/upload/v1767738897/vizx_academy-updated_kpwfzj.png" alt="Vizx Academy Logo" className="hidden lg:block h-10 w-auto mb-4" />
+            
+            {/* Mobile Logo */}
+            <img src="https://res.cloudinary.com/dvkt0lsqb/image/upload/v1768516447/Untitled_design__4__1-removebg-preview_ivfmvy.png" alt="Vizx Academy Logo" className="block lg:hidden h-10 w-auto mb-4" />
+            
             <p className="text-muted-foreground text-sm mb-4">AI-powered learning platform for modern workforce development.</p>
             <div className="flex gap-3">
               {socialLinks.map((social) => (

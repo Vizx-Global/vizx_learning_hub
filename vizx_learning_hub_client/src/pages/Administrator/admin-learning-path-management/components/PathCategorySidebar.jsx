@@ -3,6 +3,8 @@ import Icon from '../../../../components/AppIcon';
 import Button from '../../../../components/ui/Button';
 import learningPathService from '../services/learningPathService';
 import moduleService from '../services/moduleService';
+import categoryService from '../../../../api/categoryService';
+
 
 import Swal from 'sweetalert2';
 
@@ -16,12 +18,15 @@ const EditLearningPathModal = ({
   const [formData, setFormData] = useState({
     title: '',
     description: '',
-    estimatedHours: 0,
-    difficulty: 'BEGINNER',
+    categoryId: '',
+    subCategoryId: '',
     tags: [],
     isFeatured: false,
     featuredOrder: 0
   });
+  const [categories, setCategories] = useState([]);
+  const [subCategories, setSubCategories] = useState([]);
+
   const [newTag, setNewTag] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
@@ -33,12 +38,49 @@ const EditLearningPathModal = ({
         description: editingPath.description || '',
         estimatedHours: editingPath.estimatedHours || 0,
         difficulty: editingPath.difficulty || 'BEGINNER',
+        categoryId: editingPath.categoryId || '',
+        subCategoryId: editingPath.subCategoryId || '',
         tags: editingPath.tags || [],
         isFeatured: editingPath.isFeatured || false,
         featuredOrder: editingPath.featuredOrder || 0
       });
+      if (editingPath.categoryId) {
+        fetchSubCategories(editingPath.categoryId);
+      }
     }
   }, [editingPath]);
+
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const response = await categoryService.getAllCategories();
+        setCategories(response.data);
+      } catch (err) {
+        console.error('Failed to fetch categories:', err);
+      }
+    };
+    if (isOpen) fetchCategories();
+  }, [isOpen]);
+
+  const fetchSubCategories = async (categoryId) => {
+    try {
+      const response = await categoryService.getSubCategories(categoryId);
+      setSubCategories(response.data);
+    } catch (err) {
+      console.error('Failed to fetch subcategories:', err);
+    }
+  };
+
+  const handleCategoryChange = async (e) => {
+    const categoryId = e.target.value;
+    handleInputChange('categoryId', categoryId);
+    handleInputChange('subCategoryId', '');
+    setSubCategories([]);
+    if (categoryId) {
+      fetchSubCategories(categoryId);
+    }
+  };
+
 
   const handleInputChange = useCallback((field, value) => {
     setFormData(prev => ({
@@ -84,6 +126,8 @@ const EditLearningPathModal = ({
         description: formData.description,
         estimatedHours: parseFloat(formData.estimatedHours),
         difficulty: formData.difficulty,
+        categoryId: formData.categoryId,
+        subCategoryId: formData.subCategoryId,
         tags: formData.tags,
         isFeatured: formData.isFeatured,
         featuredOrder: parseInt(formData.featuredOrder)
@@ -163,6 +207,43 @@ const EditLearningPathModal = ({
           </div>
 
           <div className="grid grid-cols-2 gap-4">
+            {/* Category */}
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-2">
+                Category *
+              </label>
+              <select
+                value={formData.categoryId}
+                onChange={handleCategoryChange}
+                className="w-full px-3 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent bg-background text-foreground"
+              >
+                <option value="">Select Category</option>
+                {categories.map(cat => (
+                  <option key={cat.id} value={cat.id}>{cat.name}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Subcategory */}
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-2">
+                Subcategory
+              </label>
+              <select
+                value={formData.subCategoryId}
+                onChange={(e) => handleInputChange('subCategoryId', e.target.value)}
+                disabled={!formData.categoryId}
+                className="w-full px-3 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent bg-background text-foreground disabled:opacity-50"
+              >
+                <option value="">Select Subcategory</option>
+                {subCategories.map(sub => (
+                  <option key={sub.id} value={sub.id}>{sub.name}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
             {/* Estimated Hours */}
             <div>
               <label className="block text-sm font-medium text-foreground mb-2">
@@ -196,6 +277,7 @@ const EditLearningPathModal = ({
               </select>
             </div>
           </div>
+
 
           {/* Tags */}
           <div>
@@ -308,10 +390,12 @@ const PathCategorySidebar = ({
   onCategorySelect,
   selectedPath,
   onPathSelect,
-  onCreatePath 
+  onCreatePath,
+  learningPaths: propsLearningPaths,
+  loading: propsLoading
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
-  const [learningPaths, setLearningPaths] = useState([]);
+  const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [expandedCategories, setExpandedCategories] = useState({});
@@ -320,11 +404,13 @@ const PathCategorySidebar = ({
   const [editingPath, setEditingPath] = useState(null);
   const [actionLoading, setActionLoading] = useState({});
 
-  const handlePathCreated = (newPath) => {
-    fetchLearningPaths();
-    if (onPathSelect) {
-      onPathSelect(newPath);
-    }
+  // Use props if available, otherwise use local state (for standalone usage if any)
+  const paths = propsLearningPaths || [];
+  const isDataLoading = propsLoading !== undefined ? propsLoading : loading;
+
+  const handlePathCreated = () => {
+    // Parent should refresh
+    if (onCreatePath) onCreatePath();
   };
 
   // Edit Modal Handlers
@@ -339,7 +425,8 @@ const PathCategorySidebar = ({
   }, []);
 
   const handleEditUpdate = useCallback(() => {
-    fetchLearningPaths();
+    // Since categories might have changed or path details, we rely on parent/re-fetch
+    fetchData();
   }, []);
 
   // Action handlers with SweetAlert
@@ -367,7 +454,7 @@ const PathCategorySidebar = ({
         });
         
         // Refresh the list
-        fetchLearningPaths();
+        fetchData();
       } catch (error) {
         await Swal.fire({
           title: 'Error!',
@@ -405,7 +492,7 @@ const PathCategorySidebar = ({
         });
         
         // Refresh the list
-        fetchLearningPaths();
+        fetchData();
       } catch (error) {
         await Swal.fire({
           title: 'Error!',
@@ -444,7 +531,7 @@ const PathCategorySidebar = ({
         });
         
         // Refresh the list
-        fetchLearningPaths();
+        fetchData();
         
         // If the deleted path was selected, clear selection
         if (selectedPath?.id === path.id && onPathSelect) {
@@ -533,71 +620,50 @@ const PathCategorySidebar = ({
     );
   };
 
-  // Fetch learning paths from backend
-  const fetchLearningPaths = async () => {
+  // Fetch all data (categories and module stats)
+  const fetchData = async () => {
     setLoading(true);
     setError(null);
     
     try {
-      const response = await learningPathService.getAllLearningPaths();
+      // 1. Fetch Categories
+      const catResponse = await categoryService.getAllCategories();
       
-      // Extract learning paths from the nested structure
-      let paths = [];
-      const responseData = response.data;
-      
-      if (responseData.success && responseData.data) {
-        // Check if data is an array directly
-        if (Array.isArray(responseData.data)) {
-          paths = responseData.data;
-        } 
-        // Check if data has a learningPaths property
-        else if (responseData.data.learningPaths && Array.isArray(responseData.data.learningPaths)) {
-          paths = responseData.data.learningPaths;
-        }
-        // Check if data has a items/properties that might contain the array
-        else if (responseData.data.items && Array.isArray(responseData.data.items)) {
-          paths = responseData.data.items;
-        }
-        // Check if data has a results property
-        else if (responseData.data.results && Array.isArray(responseData.data.results)) {
-          paths = responseData.data.results;
-        }
-        // Check if data has a docs property
-        else if (responseData.data.docs && Array.isArray(responseData.data.docs)) {
-          paths = responseData.data.docs;
-        }
-        // If data is an object with pagination, look for the array in any property
-        else {
-          const dataObj = responseData.data;
-          // Try to find any array property in the data object
-          for (const key in dataObj) {
-            if (Array.isArray(dataObj[key])) {
-              paths = dataObj[key];
-              break;
-            }
-          }
-        }
+      let allCategories = [];
+      if (catResponse && Array.isArray(catResponse.data)) {
+        allCategories = catResponse.data;
+      } else if (catResponse && catResponse.data && Array.isArray(catResponse.data.categories)) {
+        allCategories = catResponse.data.categories;
+      } else if (Array.isArray(catResponse)) {
+        allCategories = catResponse;
       }
       
-      setLearningPaths(paths);
+      setCategories(allCategories);
+
+      // 2. Fetch Module stats for all paths
+      if (paths && Array.isArray(paths) && paths.length > 0) {
+        await fetchModuleDataForPaths(paths);
+      }
       
-      // Fetch module data for each learning path
-      await fetchModuleDataForPaths(paths);
-      
-      // Initialize expanded state for categories
-      const categories = [...new Set(paths.map(path => path.category || 'Uncategorized'))];
+      // 3. Initialize expanded state
       const initialExpandedState = {};
-      categories.forEach(category => {
-        initialExpandedState[category] = true;
+      allCategories.forEach(cat => {
+        initialExpandedState[cat.name] = true;
       });
+      initialExpandedState['Uncategorized'] = true;
       setExpandedCategories(initialExpandedState);
       
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to fetch learning paths');
+      console.error('Sidebar: Data fetch error:', err);
+      setError('Failed to refresh sidebar data');
     } finally {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    fetchData();
+  }, [paths.length]); // Re-fetch stats when paths change
 
   // Fetch module data for all learning paths
   const fetchModuleDataForPaths = async (paths) => {
@@ -634,22 +700,71 @@ const PathCategorySidebar = ({
     setModuleData(moduleDataMap);
   };
 
+  // Format duration from minutes to readable format
+  const formatDuration = (minutes) => {
+    const mins = parseInt(minutes);
+    if (isNaN(mins) || mins < 0) return 'N/A';
+    if (mins === 0) return '0 min';
+    
+    if (mins < 60) {
+      return `${mins} min`;
+    } else {
+      const hours = Math.floor(mins / 60);
+      const remainingMinutes = mins % 60;
+      
+      if (remainingMinutes === 0) {
+        return `${hours} hour${hours !== 1 ? 's' : ''}`;
+      } else {
+        return `${hours}h ${remainingMinutes}m`;
+      }
+    }
+  };
+
+  const getCategoryName = (path) => {
+    // 1. Try categoryRef (populated by include in backend)
+    if (path.categoryRef?.name) return path.categoryRef.name;
+    
+    // 2. Try legacy category string field
+    if (path.category && typeof path.category === 'string') return path.category;
+    
+    // 3. Try to resolve categoryId from the loaded categories list
+    if (path.categoryId && categories.length > 0) {
+      const found = categories.find(c => c.id === path.categoryId);
+      if (found) return found.name;
+    }
+    
+    return 'Uncategorized';
+  };
+
   // Group learning paths by category
   const groupPathsByCategory = (paths) => {
-    if (!Array.isArray(paths)) {
-      return {};
-    }
+    if (!Array.isArray(paths)) return {};
     
     const grouped = {};
     
-    paths.forEach(path => {
-      const category = path.category || 'Uncategorized';
-      if (!grouped[category]) {
-        grouped[category] = [];
-      }
-      grouped[category].push(path);
+    // Initialize with all categories for consistency
+    categories.forEach(cat => {
+      grouped[cat.name] = [];
     });
     
+    // Always have Uncategorized if there are paths in it
+    grouped['Uncategorized'] = [];
+    
+    paths.forEach(path => {
+      const categoryName = getCategoryName(path);
+      if (!grouped[categoryName]) {
+        grouped[categoryName] = [];
+      }
+      grouped[categoryName].push(path);
+    });
+    
+    // Clean up empty categories that aren't real categories
+    Object.keys(grouped).forEach(key => {
+      if (grouped[key].length === 0 && (key === 'Uncategorized' || !categories.some(c => c.name === key))) {
+        delete grouped[key];
+      }
+    });
+
     return grouped;
   };
 
@@ -717,26 +832,6 @@ const PathCategorySidebar = ({
     return statusMap[status?.toLowerCase()] || status;
   };
 
-  // Format duration from minutes to readable format
-  const formatDuration = (minutes) => {
-    if (!minutes || minutes === 0) return 'N/A';
-    
-    const mins = parseInt(minutes);
-    if (isNaN(mins)) return 'N/A';
-    
-    if (mins < 60) {
-      return `${mins} min`;
-    } else {
-      const hours = Math.floor(mins / 60);
-      const remainingMinutes = mins % 60;
-      
-      if (remainingMinutes === 0) {
-        return `${hours} hour${hours !== 1 ? 's' : ''}`;
-      } else {
-        return `${hours}h ${remainingMinutes}m`;
-      }
-    }
-  };
 
   // Format date
   const formatDate = (dateString) => {
@@ -752,6 +847,7 @@ const PathCategorySidebar = ({
 
   // Safe access to path properties with fallbacks
   const getPathProperty = (path, property, fallback = 'N/A') => {
+    if (!path) return fallback;
     return path[property] !== undefined && path[property] !== null ? path[property] : fallback;
   };
 
@@ -767,7 +863,7 @@ const PathCategorySidebar = ({
 
   // Calculate total enrollments across all paths
   const getTotalEnrollments = () => {
-    return learningPaths.reduce((acc, path) => {
+    return paths.reduce((acc, path) => {
       return acc + (parseInt(getPathProperty(path, 'enrollmentCount', 0)) || 0);
     }, 0);
   };
@@ -779,17 +875,13 @@ const PathCategorySidebar = ({
     }, 0);
   };
 
-  useEffect(() => {
-    fetchLearningPaths();
-  }, []);
-
   // Safe grouping of paths
-  const groupedPaths = groupPathsByCategory(learningPaths);
-  const categories = Object.keys(groupedPaths);
+  const groupedPaths = groupPathsByCategory(paths);
+  const categoryNames = Object.keys(groupedPaths);
 
   // Filter paths based on search term
   const filteredGroupedPaths = {};
-  categories.forEach(category => {
+  categoryNames.forEach(category => {
     const filteredPaths = groupedPaths[category].filter(path => {
       const title = getPathProperty(path, 'title', '').toLowerCase();
       const description = getPathProperty(path, 'description', '').toLowerCase();
@@ -942,12 +1034,12 @@ const PathCategorySidebar = ({
       </div>
 
       {/* Footer Stats */}
-      {!isCollapsed && learningPaths.length > 0 && (
+      {!isCollapsed && paths.length > 0 && (
         <div className="p-4 border-t border-border bg-muted/30">
           <div className="grid grid-cols-2 gap-4 text-center">
             <div>
               <div className="text-lg font-semibold text-foreground">
-                {learningPaths.length}
+                {paths.length}
               </div>
               <div className="text-xs text-muted-foreground">Total Paths</div>
             </div>

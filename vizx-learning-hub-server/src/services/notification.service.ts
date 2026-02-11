@@ -35,6 +35,16 @@ export class NotificationService {
     });
   }
 
+  static async notifyLevelUp(userId: string, newLevel: number) {
+    return await NotificationRepository.create({
+      userId,
+      type: 'ACHIEVEMENT', // Using achievement type for level up visual impact
+      title: 'Level Up! 🚀',
+      message: `Amazing! You've just reached Level ${newLevel}. Your expertise is growing!`,
+      priority: 'HIGH'
+    });
+  }
+
   static async notifyModuleCompletion(userId: string, moduleTitle: string, points: number) {
     return await NotificationRepository.create({
       userId,
@@ -96,7 +106,7 @@ export class NotificationService {
       users = await prisma.user.findMany({
         where: {
           OR: [
-            { department: data.audience },
+            { department: { name: data.audience } },
             { role: data.audience.toUpperCase() as any }
           ]
         },

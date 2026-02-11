@@ -119,7 +119,7 @@ const LeaderboardRow = ({ user, rank, isCurrentUser }) => {
           <h3 className={`font-bold text-lg ${isCurrentUser ? 'text-primary' : 'text-foreground'}`}>
             {user.name} {isCurrentUser && <span className="text-xs bg-primary text-primary-foreground px-2 py-0.5 rounded-full ml-2">You</span>}
           </h3>
-          <p className="text-xs text-muted-foreground">{user.department} • {user.jobTitle}</p>
+          <p className="text-xs text-muted-foreground">{user.department?.name || user.department} • {user.jobTitle}</p>
         </div>
       </div>
 

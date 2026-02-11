@@ -15,9 +15,21 @@ export const useLearningPaths = (initialFilters = {}) => {
         ...filters,
         ...queryParams
       });
-      setLearningPaths(response.data.data);
+      
+      // Handle the new nested structure: data.data.learningPaths
+      const responseData = response.data?.data;
+      if (responseData && Array.isArray(responseData.learningPaths)) {
+        setLearningPaths(responseData.learningPaths);
+      } else if (Array.isArray(response.data?.data)) {
+        // Fallback for older API structure
+        setLearningPaths(response.data.data);
+      } else {
+        setLearningPaths([]);
+      }
     } catch (err) {
+      console.error('useLearningPaths: fetch error', err);
       setError(err.response?.data?.message || 'Failed to fetch learning paths');
+      setLearningPaths([]);
     } finally {
       setLoading(false);
     }
@@ -27,7 +39,10 @@ export const useLearningPaths = (initialFilters = {}) => {
     setLoading(true);
     try {
       const response = await learningPathService.createLearningPath(learningPathData);
-      setLearningPaths(prev => [...prev, response.data.data]);
+      const newPath = response.data?.data;
+      if (newPath) {
+        setLearningPaths(prev => [...prev, newPath]);
+      }
       return response.data;
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to create learning path');
@@ -41,9 +56,12 @@ export const useLearningPaths = (initialFilters = {}) => {
     setLoading(true);
     try {
       const response = await learningPathService.updateLearningPath(id, learningPathData);
-      setLearningPaths(prev => 
-        prev.map(lp => lp.id === id ? response.data.data : lp)
-      );
+      const updatedPath = response.data?.data;
+      if (updatedPath) {
+        setLearningPaths(prev => 
+          prev.map(lp => lp.id === id ? updatedPath : lp)
+        );
+      }
       return response.data;
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to update learning path');

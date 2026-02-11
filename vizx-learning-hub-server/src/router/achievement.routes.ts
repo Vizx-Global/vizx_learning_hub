@@ -6,6 +6,7 @@ const router = Router();
 
 // Public/All authenticated users routes
 router.get('/', authenticate, AchievementController.getAllAchievements);
+router.get('/recent', authenticate, AchievementController.getRecentAchievements);
 router.get('/:id', authenticate, AchievementController.getAchievementById);
 
 // Admin only routes

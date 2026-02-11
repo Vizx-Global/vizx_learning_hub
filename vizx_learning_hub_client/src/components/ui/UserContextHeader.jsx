@@ -1,12 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import Icon from '../AppIcon';
 import { useAuth } from '../../contexts/AuthContext';
+import notificationService from '../../api/notificationService';
+import moduleProgressService from '../../api/moduleProgressService';
 
 const UserContextHeader = ({ isCollapsed = false }) => {
-  const { user: currentUser } = useAuth();
+  const { user: currentUser, checkAuthStatus } = useAuth();
   const [notifications, setNotifications] = useState(0);
   const [isOnline, setIsOnline] = useState(true);
   const [loading, setLoading] = useState(!currentUser);
+  const [progressStats, setProgressStats] = useState({
+    completedModules: 0,
+    totalModules: 0,
+    weeklyGoal: 5
+  });
 
   const getLevelFromPoints = (points) => {
     if (points >= 1500) return 'Expert';
@@ -22,17 +29,67 @@ const UserContextHeader = ({ isCollapsed = false }) => {
       points: currentUser.totalPoints || 0,
       streak: currentUser.currentStreak || 0,
       level: getLevelFromPoints(currentUser.totalPoints || 0),
-      completedModules: currentUser.completedModules || 0,
+      completedModules: progressStats.completedModules || currentUser.completedModules || 0,
       currentLevel: currentUser.currentLevel || 1
     };
   };
 
   const userInfo = getUserDisplayInfo();
-  const weeklyProgress = Math.min(100, (userInfo.completedModules / 5) * 100);
+  const weeklyProgress = Math.min(100, (userInfo.completedModules / progressStats.weeklyGoal) * 100);
 
-  const handleNotificationClick = async () => { try { setNotifications(0); } catch (error) { console.error('Error marking notifications as read:', error); } };
+  const fetchNotifications = async () => {
+    try {
+      const response = await notificationService.getUnreadCount();
+      // Adjust based on typical API response structure: response.data.data.count
+      setNotifications(response.data?.count || response.data?.data?.count || 0);
+    } catch (error) {
+      console.error('Error fetching notification count:', error);
+    }
+  };
 
-  useEffect(() => { if (currentUser) setLoading(false); }, [currentUser]);
+  const fetchProgress = async () => {
+    try {
+      const response = await moduleProgressService.getUserProgressOverview();
+      const stats = response.data?.statistics || response.data?.data?.statistics;
+      if (stats) {
+        setProgressStats(prev => ({
+          ...prev,
+          completedModules: stats.totalCompletedModules || 0,
+          totalModules: stats.totalModules || 0
+        }));
+      }
+    } catch (error) {
+      console.error('Error fetching progress overview:', error);
+    }
+  };
+
+  const handleNotificationClick = async () => { 
+    try { 
+      await notificationService.markAllAsRead();
+      setNotifications(0); 
+    } catch (error) { 
+      console.error('Error marking notifications as read:', error); 
+    } 
+  };
+
+  useEffect(() => { 
+    if (currentUser) {
+      setLoading(false);
+      fetchNotifications();
+      fetchProgress();
+
+      // Set up periodic refresh for notifications
+      const notificationInterval = setInterval(fetchNotifications, 60000); // Every minute
+      
+      // Also refresh user data from auth context occasionally to keep streaks/points in sync
+      const authInterval = setInterval(checkAuthStatus, 300000); // Every 5 minutes
+
+      return () => {
+        clearInterval(notificationInterval);
+        clearInterval(authInterval);
+      };
+    } 
+  }, [currentUser]);
 
   if (loading) return (
     <div className="p-4 border-b border-border bg-muted/30">
@@ -90,7 +147,7 @@ const UserContextHeader = ({ isCollapsed = false }) => {
         </button>
       </div>
       <div className="mt-3 pt-3 border-t border-border/50">
-        <div className="flex items-center justify-between mb-2"><span className="text-xs text-muted-foreground">Weekly Goal</span><span className="text-xs font-mono text-foreground">{userInfo.completedModules}/5 modules</span></div>
+        <div className="flex items-center justify-between mb-2"><span className="text-xs text-muted-foreground">Weekly Goal</span><span className="text-xs font-mono text-foreground">{userInfo.completedModules}/{progressStats.weeklyGoal} modules</span></div>
         <div className="w-full bg-muted rounded-full h-2"><div className="bg-gradient-to-r from-primary to-secondary h-2 rounded-full transition-all duration-300 ease-out" style={{ width: `${weeklyProgress}%` }} /></div>
       </div>
       <div className="flex items-center justify-between mt-2">

@@ -4,6 +4,7 @@ import { EmailService } from '../utils/email.utils';
 import { UserRepository } from '../repositories/user.repository';
 import { UserRole } from '@prisma/client';
 import { asyncHandler } from '../utils/asyncHandler';
+import { AuthRequest } from '../middlewares/auth.middleware';
 
 export class VerificationController {
     static requestPasswordReset = asyncHandler(async (req: Request, res: Response) => {
@@ -33,7 +34,7 @@ export class VerificationController {
         });
     });
 
-    static verifyEmail = asyncHandler(async (req: Request, res: Response) => {
+    static verifyEmail = asyncHandler(async (req: AuthRequest, res: Response) => {
         await AuthService.verifyEmail(req.user!.userId, req.body.code);
         res.status(200).json({
             success: true,
@@ -41,7 +42,7 @@ export class VerificationController {
         });
     });
 
-    static resendVerificationCode = asyncHandler(async (req: Request, res: Response) => {
+    static resendVerificationCode = asyncHandler(async (req: AuthRequest, res: Response) => {
         let userId = req.user?.userId;
         if (!userId && req.body.email) {
             const user = await UserRepository.findByEmail(req.body.email);
@@ -58,13 +59,13 @@ export class VerificationController {
         }
 
         await AuthService.resendVerificationCode(userId);
-        res.status(200).json({
+        return res.status(200).json({
             success: true,
             message: 'Verification code has been requested.',
         });
     });
 
-    static forcePasswordChange = asyncHandler(async (req: Request, res: Response) => {
+    static forcePasswordChange = asyncHandler(async (req: AuthRequest, res: Response) => {
         await AuthService.forceChangePassword(req.user!.userId, req.body.newPassword);
         res.status(200).json({
             success: true,
@@ -72,7 +73,7 @@ export class VerificationController {
         });
     });
 
-    static getVerificationStatus = asyncHandler(async (req: Request, res: Response) => {
+    static getVerificationStatus = asyncHandler(async (req: AuthRequest, res: Response) => {
         const user = await UserRepository.findById(req.user!.userId);
         if (!user) {
             throw new Error('User not found');
@@ -87,7 +88,7 @@ export class VerificationController {
         });
     });
 
-    static createEmployeeByManager = asyncHandler(async (req: Request, res: Response) => {
+    static createEmployeeByManager = asyncHandler(async (req: AuthRequest, res: Response) => {
         const employee = await AuthService.createEmployeeByManager(req.validatedData || req.body, req.user!.userId);
         res.status(201).json({
             success: true,
@@ -96,7 +97,7 @@ export class VerificationController {
         });
     });
 
-    static getManagerEmployeeById = asyncHandler(async (req: Request, res: Response) => {
+    static getManagerEmployeeById = asyncHandler(async (req: AuthRequest, res: Response) => {
         const managerId = req.user!.userId;
         const employeeId = req.params.employeeId;
         const employee = await UserRepository.findById(employeeId);
@@ -124,7 +125,7 @@ export class VerificationController {
         });
     });
 
-    static updateEmployeeByManager = asyncHandler(async (req: Request, res: Response) => {
+    static updateEmployeeByManager = asyncHandler(async (req: AuthRequest, res: Response) => {
         const managerId = req.user!.userId;
         const employeeId = req.params.employeeId;
         const updateData = req.validatedData || req.body;
@@ -150,7 +151,7 @@ export class VerificationController {
         });
     });
 
-    static deactivateEmployee = asyncHandler(async (req: Request, res: Response) => {
+    static deactivateEmployee = asyncHandler(async (req: AuthRequest, res: Response) => {
         await AuthService.deactivateUser(req.params.employeeId, req.user!.userId);
         res.status(200).json({
             success: true,
@@ -158,7 +159,7 @@ export class VerificationController {
         });
     });
 
-    static resetPasswordByAdmin = asyncHandler(async (req: Request, res: Response) => {
+    static resetPasswordByAdmin = asyncHandler(async (req: AuthRequest, res: Response) => {
         await AuthService.resetPasswordByAdmin(req.params.userId, req.user!.userId);
         res.status(200).json({
             success: true,
@@ -169,7 +170,7 @@ export class VerificationController {
     static testEmailService = asyncHandler(async (req: Request, res: Response) => {
         const { email } = req.body;
         if (!email) throw new Error('Email is required');
-        await EmailService.sendWelcomeEmail(email, 'Test User', 'test-password-123', 'TESTER');
+        await EmailService.sendWelcomeEmail(email, 'Test User');
         res.status(200).json({
             success: true,
             message: 'Test email sent successfully',

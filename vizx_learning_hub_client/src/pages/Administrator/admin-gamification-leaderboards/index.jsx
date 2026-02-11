@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../../../contexts/AuthContext';
 import NavigationSidebar from '../../../components/ui/NavigationSidebar';
 import Button from '../../../components/ui/Button';
 import LeaderboardTabs from './components/LeaderboardTabs';
@@ -7,10 +8,13 @@ import FilterToolbar from './components/FilterToolbar';
 import LeaderboardTable from './components/LeaderboardTable';
 import AchievementShowcase from './components/AchievementShowcase';
 import LiveUpdateIndicators from './components/LiveUpdateIndicators';
+import achievementService from '../../../api/achievementService';
+import leaderboardService from '../../../api/leaderboardService';
 import UserRankCard from './components/UserRankCard';
 
 const GamificationLeaderboards = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [activeTab, setActiveTab] = useState('global');
   const [timeRange, setTimeRange] = useState('weekly');
   const [department, setDepartment] = useState('all');
@@ -19,21 +23,77 @@ const GamificationLeaderboards = () => {
   const [lastUpdate, setLastUpdate] = useState(new Date());
   const [updateCount, setUpdateCount] = useState(0);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [leaderboardData, setLeaderboardData] = useState([]);
+  const [recentAchievements, setRecentAchievements] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  const mockLeaderboardData = [
-    { id: 'user-1', rank: 1, name: 'Sarah Chen', avatar: 'https://images.unsplash.com/photo-1494790108755-2616b612b786?w=150&h=150&fit=crop&crop=face', department: 'Engineering', points: 4850, streak: 28, trend: 'up', rankChange: 2, pointsChange: 180, isOnline: true, recentAchievements: [{ icon: 'Trophy', name: 'AI Expert' }, { icon: 'Target', name: 'Milestone Master' }, { icon: 'Flame', name: 'Streak Champion' }], lastActivity: '2 minutes ago' },
-    { id: 'user-2', rank: 2, name: 'Mike Johnson', avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop&crop=face', department: 'Marketing', points: 4720, streak: 21, trend: 'stable', rankChange: 0, pointsChange: 95, isOnline: true, recentAchievements: [{ icon: 'CheckCircle', name: 'Course Complete' }, { icon: 'Star', name: 'Top Performer' }], lastActivity: '5 minutes ago' },
-    { id: 'user-3', rank: 3, name: 'Emma Wilson', avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150&h=150&fit=crop&crop=face', department: 'Sales', points: 4580, streak: 15, trend: 'up', rankChange: 1, pointsChange: 120, isOnline: false, recentAchievements: [{ icon: 'Flame', name: 'Learning Streak' }], lastActivity: '1 hour ago' },
-    { id: 'user-4', rank: 4, name: 'David Rodriguez', avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop&crop=face', department: 'HR', points: 4350, streak: 12, trend: 'down', rankChange: -1, pointsChange: 45, isOnline: true, recentAchievements: [{ icon: 'Award', name: 'Team Player' }], lastActivity: '30 minutes ago' },
-    { id: 'user-5', rank: 5, name: 'Lisa Park', avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150&h=150&fit=crop&crop=face', department: 'Finance', points: 4200, streak: 9, trend: 'up', rankChange: 3, pointsChange: 200, isOnline: true, recentAchievements: [{ icon: 'TrendingUp', name: 'Rising Star' }, { icon: 'Target', name: 'Goal Crusher' }], lastActivity: '15 minutes ago' }
-  ];
+  useEffect(() => {
+    fetchData();
+  }, [activeTab, timeRange, department, skillCategory, updateCount]);
 
-  const mockRecentAchievements = [
-    { id: 'achievement-1', title: 'AI Fundamentals Master', description: 'Completed all AI fundamentals modules with 95%+ scores', type: 'milestone', userName: 'Sarah Chen', userAvatar: 'https://images.unsplash.com/photo-1494790108755-2616b612b786?w=150&h=150&fit=crop&crop=face', timeAgo: '2 hours ago', points: 500, celebrations: 12 },
-    { id: 'achievement-2', title: '30-Day Learning Streak', description: 'Maintained consistent daily learning for 30 consecutive days', type: 'streak', userName: 'Mike Johnson', userAvatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop&crop=face', timeAgo: '4 hours ago', points: 300, celebrations: 8 },
-    { id: 'achievement-3', title: 'Machine Learning Champion', description: 'Scored in top 10% across all ML assessments', type: 'competition', userName: 'Emma Wilson', userAvatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150&h=150&fit=crop&crop=face', timeAgo: '6 hours ago', points: 750, celebrations: 15 },
-    { id: 'achievement-4', title: 'Course Completion Expert', description: 'Completed 5 courses with perfect attendance', type: 'completion', userName: 'David Rodriguez', userAvatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop&crop=face', timeAgo: '1 day ago', points: 400, celebrations: 6 }
-  ];
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+      const [leaderboardRes, achievementsRes] = await Promise.all([
+        leaderboardService.getLeaderboard(50, timeRange, department === 'all' ? null : department),
+        achievementService.getAllAchievements() // Or specialized 'recent' if available
+      ]);
+      
+      // Transform leaderboard data if needed to match component expectations
+      // Assuming API returns array of user objects with points/rank
+      const formattedLeaderboard = (leaderboardRes.data || leaderboardRes).map((item, index) => ({
+        id: item.user?.id || item.id,
+        rank: index + 1,
+        name: item.user ? `${item.user.firstName} ${item.user.lastName}` : item.name,
+        avatar: item.user?.avatar || item.avatar,
+        department: item.user?.department?.name || item.user?.department || item.department || 'N/A',
+        points: item.points || item.totalPoints || 0,
+        streak: item.user?.currentStreak || item.streak || 0,
+        trend: item.trend || 'stable', // Backend might need to provide this or compute
+        rankChange: item.rankChange || 0,
+        pointsChange: item.pointsChange || 0,
+        isOnline: item.isOnline || false, // Online status might come from socket
+        recentAchievements: item.recentAchievements || [],
+        lastActiveAt: item.lastActiveAt,
+        lastActivity: item.lastActivity || (item.lastActiveAt ? new Date(item.lastActiveAt).toLocaleTimeString() : 'Just now')
+      }));
+      
+      setLeaderboardData(formattedLeaderboard);
+
+      // Simple transformation for achievements if backend returns raw list
+      // Ideally backend endpoint /recent-activity provides mixed feed
+      // Using mock-like structure for now if specialized endpoint missing
+      if (achievementsRes.data) {
+          // If API returns achievement definitions, we can't show "user earned X" without user-achievement link.
+          // For now, let's try to use what we have or keep mock fallback if empty
+          // But user wants REAL data. 
+          // If achievementService.getAllAchievements returns definitions, checking 'recent' endpoint from Step 922
+          try {
+             const recentRes = await leaderboardService.getRecentAchievements();
+             if (recentRes.success) {
+                 setRecentAchievements(recentRes.data.map(a => ({
+                     id: a.id,
+                     title: a.achievement.title,
+                     description: a.achievement.description,
+                     type: a.achievement.type?.toLowerCase() || 'milestone',
+                     userName: `${a.user.firstName} ${a.user.lastName}`,
+                     userAvatar: a.user.avatar,
+                     timeAgo: new Date(a.earnedAt).toLocaleTimeString(), // simplified
+                     points: a.achievement.points,
+                     celebrations: 0
+                 })));
+             }
+          } catch (e) {
+             console.log('Recent achievements fetch failed', e);
+          }
+      }
+      
+    } catch (error) {
+      console.error('Error fetching leaderboard data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
     if (isLive) {
@@ -41,6 +101,14 @@ const GamificationLeaderboards = () => {
       return () => clearInterval(interval);
     }
   }, [isLive]);
+
+  useEffect(() => {
+    if (activeTab === 'department' && user?.department) {
+      setDepartment(user.department.name || (typeof user.department === 'string' ? user.department : 'all'));
+    } else if (activeTab === 'global') {
+      setDepartment('all');
+    }
+  }, [activeTab, user]);
 
   const handleRefresh = () => { setUpdateCount(prev => prev + 1); setLastUpdate(new Date()); };
   const handleCelebrate = (achievementId) => console.log('Celebrating achievement:', achievementId);
@@ -63,24 +131,40 @@ const GamificationLeaderboards = () => {
           </div>
         </header>
         <main className="p-4 space-y-6">
-          <UserRankCard totalParticipants={150} showComparison={true} />
+          <UserRankCard 
+            user={leaderboardData.find(u => u.id === user?.id) || (user ? {
+              name: `${user.firstName} ${user.lastName}`,
+              department: user.department?.name || (typeof user.department === 'string' ? user.department : 'N/A'),
+              points: user.totalPoints || 0,
+              avatar: user.avatar,
+              streak: user.currentStreak || 0,
+              completedModules: user.completedModules || 0,
+              totalModules: user.totalModules || 0
+            } : null)} 
+            totalParticipants={leaderboardData.length} 
+            showComparison={true} 
+            rank={leaderboardData.findIndex(u => u.id === user?.id) !== -1 ? leaderboardData.findIndex(u => u.id === user?.id) + 1 : '-'}
+          />
           <LeaderboardTabs activeTab={activeTab} onTabChange={setActiveTab} userRole="employee" />
           <FilterToolbar timeRange={timeRange} onTimeRangeChange={setTimeRange} department={department} onDepartmentChange={setDepartment} skillCategory={skillCategory} onSkillCategoryChange={setSkillCategory} onRefresh={handleRefresh} isLive={isLive} />
           <div className="grid grid-cols-1 xl:grid-cols-4 gap-6">
             <div className="xl:col-span-3">
-              <LeaderboardTable data={mockLeaderboardData} currentUserId="user-1" showTrends={true} showAchievements={true} isLive={isLive} />
+              <LeaderboardTable data={leaderboardData} currentUserId={user?.id} showTrends={true} showAchievements={true} isLive={isLive} />
             </div>
             <div className="xl:col-span-1 space-y-6">
-              <LiveUpdateIndicators isConnected={isLive} lastUpdate={lastUpdate} updateCount={updateCount} onReconnect={handleReconnect} />
-              <AchievementShowcase recentAchievements={mockRecentAchievements} onCelebrate={handleCelebrate} />
+              <LiveUpdateIndicators isConnected={isLive} lastUpdate={lastUpdate} updateCount={updateCount} onReconnect={handleReconnect} recentActivities={recentAchievements} />
+              <AchievementShowcase recentAchievements={recentAchievements} onCelebrate={handleCelebrate} />
             </div>
           </div>
           <div className="bg-card border border-border rounded-lg p-6">
             <h3 className="font-semibold text-foreground mb-4">Quick Actions</h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <Button variant="outline" fullWidth iconName="BookOpen" iconPosition="left" onClick={() => navigate('/employee-learning-dashboard')}>View Learning Dashboard</Button>
-              <Button variant="outline" fullWidth iconName="Gamepad2" iconPosition="left" onClick={() => navigate('/interactive-learning-games-hub')}>Play Learning Games</Button>
-              <Button variant="outline" fullWidth iconName="Users" iconPosition="left" onClick={() => navigate('/user-profile-management')}>Manage Profile</Button>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <Button variant="outline" fullWidth iconName="LayoutDashboard" iconPosition="left" onClick={() => navigate('/admin-learning-dashboard')}>Learning Dashboard</Button>
+              <Button variant="outline" fullWidth iconName="Route" iconPosition="left" onClick={() => navigate('/learning-path-management')}>Learning Paths</Button>
+              <Button variant="outline" fullWidth iconName="BarChart3" iconPosition="left" onClick={() => navigate('/cohort-performance-analytics')}>Performance Analytics</Button>
+              <Button variant="outline" fullWidth iconName="Gamepad2" iconPosition="left" onClick={() => navigate('/interactive-learning-games-hub')}>Learning Games Hub</Button>
+              <Button variant="outline" fullWidth iconName="Users" iconPosition="left" onClick={() => navigate('/user-profile-management')}>User Management</Button>
+              <Button variant="outline" fullWidth iconName="Settings" iconPosition="left" onClick={() => navigate('/administrative-system-configuration')}>System Configuration</Button>
             </div>
           </div>
         </main>

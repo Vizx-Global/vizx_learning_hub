@@ -3,11 +3,8 @@ import Icon from '../../../../components/AppIcon';
 
 const LeaderboardTabs = ({ activeTab, onTabChange, userRole = 'employee' }) => {
   const tabs = [
-    { id: 'global', label: 'Global Rankings', icon: 'Globe', description: 'All employees across organization', roles: ['employee', 'admin', 'manager'] },
-    { id: 'department', label: 'Department', icon: 'Building2', description: 'Your department rankings', roles: ['employee', 'admin', 'manager'] },
-    { id: 'team', label: 'My Team', icon: 'Users', description: 'Team-specific leaderboard', roles: ['manager', 'admin'] },
-    { id: 'cohorts', label: 'Learning Cohorts', icon: 'GraduationCap', description: 'Custom learning groups', roles: ['admin', 'manager'] },
-    { id: 'skills', label: 'Skills-Based', icon: 'Target', description: 'Rankings by skill category', roles: ['employee', 'admin', 'manager'] }
+    { id: 'global', label: 'General', icon: 'Globe', description: 'All employees across organization', roles: ['employee', 'admin', 'manager'] },
+    { id: 'department', label: 'Departmental', icon: 'Building2', description: 'By department rankings', roles: ['employee', 'admin', 'manager'] }
   ];
 
   const filteredTabs = tabs?.filter(tab => tab?.roles?.includes(userRole));

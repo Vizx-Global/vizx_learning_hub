@@ -98,12 +98,20 @@ const AchievementShowcase = ({ recentAchievements = [], onCelebrate }) => {
         </div>
         <div className="mt-4 pt-4 border-t border-border">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            {[{ type: 'milestone', count: 12, label: 'Milestones' }, { type: 'streak', count: 8, label: 'Streaks' }, { type: 'completion', count: 15, label: 'Completions' }, { type: 'competition', count: 5, label: 'Competitions' }]?.map((category) => (
-              <div key={category?.type} className="text-center p-3 bg-muted/20 rounded-lg">
-                <div className={`w-8 h-8 mx-auto mb-2 rounded-full flex items-center justify-center bg-gradient-to-r ${getAchievementColor(category?.type)}`}><Icon name={getAchievementIcon(category?.type)} size={14} className="text-white" /></div>
-                <div className="font-semibold text-foreground text-sm">{category?.count}</div><div className="text-xs text-muted-foreground">{category?.label}</div>
-              </div>
-            ))}
+            {[
+              { type: 'milestone', label: 'Milestones' },
+              { type: 'streak', label: 'Streaks' },
+              { type: 'completion', label: 'Completions' },
+              { type: 'competition', label: 'Competitions' }
+            ].map((category) => {
+              const count = recentAchievements?.filter(a => a.type === category.type).length || 0;
+              return (
+                <div key={category?.type} className="text-center p-3 bg-muted/20 rounded-lg">
+                  <div className={`w-8 h-8 mx-auto mb-2 rounded-full flex items-center justify-center bg-gradient-to-r ${getAchievementColor(category?.type)}`}><Icon name={getAchievementIcon(category?.type)} size={14} className="text-white" /></div>
+                  <div className="font-semibold text-foreground text-sm">{count}</div><div className="text-xs text-muted-foreground">{category?.label}</div>
+                </div>
+              );
+            })}
           </div>
         </div>
       </div>

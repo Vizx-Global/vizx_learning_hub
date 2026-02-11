@@ -13,7 +13,6 @@ const ModuleConfigPanel = ({ selectedModule, onSave, onCancel }) => {
     contentType: 'DOCUMENT',
     estimatedMinutes: '',
     difficulty: 'BEGINNER',
-    category: '',
     videoUrl: '',
     audioUrl: '',
     documentUrl: '',
@@ -68,7 +67,6 @@ const ModuleConfigPanel = ({ selectedModule, onSave, onCancel }) => {
         contentType: selectedModule.contentType || 'DOCUMENT',
         estimatedMinutes: selectedModule.estimatedMinutes || '',
         difficulty: selectedModule.difficulty || 'BEGINNER',
-        category: selectedModule.category || '',
         videoUrl: selectedModule.videoUrl || '',
         audioUrl: selectedModule.audioUrl || '',
         documentUrl: selectedModule.documentUrl || '',
@@ -457,15 +455,6 @@ const ModuleConfigPanel = ({ selectedModule, onSave, onCancel }) => {
                 min="1"
                 error={errors.estimatedMinutes}
                 required
-                disabled={isSaving}
-              />
-
-              <Input
-                label="Category"
-                type="text"
-                value={formData.category}
-                onChange={(e) => handleInputChange('category', e.target.value)}
-                placeholder="e.g., AI Fundamentals, Cloud, Security"
                 disabled={isSaving}
               />
             </div>

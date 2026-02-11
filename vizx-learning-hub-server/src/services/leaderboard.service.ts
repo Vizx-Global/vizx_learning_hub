@@ -12,7 +12,7 @@ export class LeaderboardService {
     // Ranking based on Total Points (Primary) and Longest Streak (Secondary)
     const users = await this.prisma.user.findMany({
       where: {
-        role: 'EMPLOYEE', // Assuming only employees are on the leaderboard
+        role: 'EMPLOYEE',
         status: 'ACTIVE'
       },
       select: {
@@ -23,8 +23,18 @@ export class LeaderboardService {
         totalPoints: true,
         longestStreak: true,
         currentStreak: true,
-        department: true,
-        jobTitle: true
+        department: {
+          select: { name: true }
+        },
+        jobTitle: true,
+        lastActiveDate: true,
+        _count: {
+          select: {
+            moduleProgress: {
+              where: { status: 'COMPLETED' }
+            }
+          }
+        }
       },
       orderBy: [
         { totalPoints: 'desc' },
@@ -37,12 +47,16 @@ export class LeaderboardService {
       rank: index + 1,
       id: user.id,
       name: `${user.firstName} ${user.lastName}`,
+      firstName: user.firstName,
+      lastName: user.lastName,
       avatar: user.avatar,
       points: user.totalPoints,
       longestStreak: user.longestStreak,
       currentStreak: user.currentStreak,
-      department: user.department,
-      jobTitle: user.jobTitle
+      modulesCompleted: user._count.moduleProgress,
+      department: user.department?.name || '',
+      jobTitle: user.jobTitle,
+      lastActiveAt: user.lastActiveDate
     }));
   }
 }

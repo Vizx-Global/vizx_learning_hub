@@ -8,7 +8,7 @@ import Image from '../../components/AppImage';
 import LiveUpdateIndicator from '../../components/ui/LiveUpdateIndicator';
 
 const SignUpForm = () => {
-  const [formData, setFormData] = useState({ firstName: '', lastName: '', email: '', password: '', confirmPassword: '', employeeId: '', phone: '', department: '', jobTitle: '', agreeToTerms: false });
+  const [formData, setFormData] = useState({ firstName: '', lastName: '', email: '', password: '', confirmPassword: '', employeeId: '', phone: '', department: 'System Administrator', jobTitle: '', agreeToTerms: false });
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState({});
   const { register } = useAuth();
@@ -55,7 +55,7 @@ const SignUpForm = () => {
       };
       const result = await register(registrationData);
       if (result.success) {
-        navigate('/login', { replace: true, state: { message: 'Welcome to AI Learning Hub! Your account has been created successfully.', type: 'success' } });
+        navigate('/verify-email', { state: { email: formData.email.trim(), message: 'Please verify your email to activate your account.' } });
       } else {
         if (result.error.includes('email') || result.error.includes('Email')) setErrors({ email: result.error });
         else if (result.error.includes('Employee ID')) setErrors({ employeeId: result.error });

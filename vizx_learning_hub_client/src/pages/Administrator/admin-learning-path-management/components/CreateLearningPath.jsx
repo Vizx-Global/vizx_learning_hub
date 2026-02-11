@@ -1,19 +1,24 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Icon from '../../../../components/AppIcon';
 import Button from '../../../../components/ui/Button';
 import learningPathService from '../services/learningPathService';
+import categoryService from '../../../../api/categoryService';
+import toast from 'react-hot-toast';
 
 const CreateLearningPath = ({ isOpen, onClose, onSuccess }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [categories, setCategories] = useState([]);
+  const [subCategories, setSubCategories] = useState([]);
   const [activeTab, setActiveTab] = useState('basic');
+
   
   const [formData, setFormData] = useState({
     title: '',
     description: '',
     shortDescription: '',
-    category: '',
-    subcategory: '',
+    categoryId: '',
+    subCategoryId: '',
     difficulty: 'BEGINNER',
     estimatedHours: '',
     minEstimatedHours: '',
@@ -29,6 +34,39 @@ const CreateLearningPath = ({ isOpen, onClose, onSuccess }) => {
     isFeatured: false,
     featuredOrder: null
   });
+
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const response = await categoryService.getAllCategories();
+        if (response.success) {
+          setCategories(response.data);
+        }
+      } catch (err) {
+        console.error('Failed to fetch categories:', err);
+      }
+    };
+    if (isOpen) {
+      fetchCategories();
+    }
+  }, [isOpen]);
+
+  const handleCategoryChange = async (e) => {
+    const categoryId = e.target.value;
+    setFormData(prev => ({ ...prev, categoryId, subCategoryId: '' }));
+    setSubCategories([]);
+    if (categoryId) {
+      try {
+        const response = await categoryService.getSubCategories(categoryId);
+        if (response.success) {
+          setSubCategories(response.data);
+        }
+      } catch (err) {
+        console.error('Failed to fetch subcategories:', err);
+      }
+    }
+  };
+
 
   const [tempInputs, setTempInputs] = useState({
     prerequisite: '',
@@ -90,7 +128,7 @@ const CreateLearningPath = ({ isOpen, onClose, onSuccess }) => {
       setError('Description is required');
       return false;
     }
-    if (!formData.category.trim()) {
+    if (!formData.categoryId) {
       setError('Category is required');
       return false;
     }
@@ -130,11 +168,14 @@ const CreateLearningPath = ({ isOpen, onClose, onSuccess }) => {
       const response = await learningPathService.createLearningPath(submitData);
       
       if (response.data.success) {
+        toast.success('Learning path created successfully');
         onSuccess(response.data.data);
         handleClose();
       }
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to create learning path');
+      const errorMessage = err.response?.data?.message || 'Failed to create learning path';
+      setError(errorMessage);
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -145,8 +186,8 @@ const CreateLearningPath = ({ isOpen, onClose, onSuccess }) => {
       title: '',
       description: '',
       shortDescription: '',
-      category: '',
-      subcategory: '',
+      categoryId: '',
+      subCategoryId: '',
       difficulty: 'BEGINNER',
       estimatedHours: '',
       minEstimatedHours: '',
@@ -285,28 +326,35 @@ const CreateLearningPath = ({ isOpen, onClose, onSuccess }) => {
                   <label className="block text-sm font-medium text-foreground mb-2">
                     Category <span className="text-error">*</span>
                   </label>
-                  <input
-                    type="text"
-                    name="category"
-                    value={formData.category}
-                    onChange={handleInputChange}
-                    placeholder="e.g., AI Fundamentals"
+                  <select
+                    name="categoryId"
+                    value={formData.categoryId}
+                    onChange={handleCategoryChange}
                     className="w-full px-4 py-2 bg-muted border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-                  />
+                  >
+                    <option value="">Select Category</option>
+                    {categories.map(cat => (
+                      <option key={cat.id} value={cat.id}>{cat.name}</option>
+                    ))}
+                  </select>
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium text-foreground mb-2">
                     Subcategory
                   </label>
-                  <input
-                    type="text"
-                    name="subcategory"
-                    value={formData.subcategory}
+                  <select
+                    name="subCategoryId"
+                    value={formData.subCategoryId}
                     onChange={handleInputChange}
-                    placeholder="e.g., Machine Learning"
-                    className="w-full px-4 py-2 bg-muted border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-                  />
+                    disabled={!formData.categoryId}
+                    className="w-full px-4 py-2 bg-muted border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
+                  >
+                    <option value="">Select Subcategory</option>
+                    {subCategories.map(sub => (
+                      <option key={sub.id} value={sub.id}>{sub.name}</option>
+                    ))}
+                  </select>
                 </div>
               </div>
 

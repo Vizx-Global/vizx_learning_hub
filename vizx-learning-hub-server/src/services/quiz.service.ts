@@ -102,14 +102,15 @@ export class QuizService {
       create: { userId, moduleId, enrollmentId, status: ProgressStatus.COMPLETED, progress: 100, completedAt: new Date(), quizScore: score }
     });
 
-    const user = await prisma.user.findUnique({ where: { id: userId }, select: { totalPoints: true } });
-    const newBalance = (user?.totalPoints || 0) + score;
-
-    await prisma.pointsTransaction.create({
-      data: { userId, type: 'EARNED', amount: Math.round(score), balance: Math.round(newBalance), source: 'QUIZ_COMPLETION', sourceId: quiz.id, description: `Passed quiz for module: ${quiz.module?.title}` }
-    });
-
-    await prisma.user.update({ where: { id: userId }, data: { totalPoints: Math.round(newBalance) } });
+    const { GamificationService } = require('./gamification.service');
+    const gamificationService = new GamificationService(prisma);
+    await gamificationService.awardPoints(
+      userId, 
+      Math.round(score), 
+      'QUIZ_COMPLETION', 
+      quiz.id, 
+      `Passed quiz for module: ${quiz.module?.title}`
+    );
 
     await prisma.activity.create({
       data: {

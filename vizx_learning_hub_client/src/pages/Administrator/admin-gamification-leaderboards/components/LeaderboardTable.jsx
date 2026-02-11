@@ -6,6 +6,22 @@ const LeaderboardTable = ({ data = [], currentUserId = 'user-1', showTrends = tr
   const [sortField, setSortField] = useState('rank');
   const [sortDirection, setSortDirection] = useState('asc');
   const [highlightedUsers, setHighlightedUsers] = useState(new Set());
+  const [currentTime, setCurrentTime] = useState(new Date());
+
+  useEffect(() => {
+    const timer = setInterval(() => setCurrentTime(new Date()), 60000); // Update every minute
+    return () => clearInterval(timer);
+  }, []);
+
+  const determineStatus = (lastActiveAt) => {
+    if (!lastActiveAt) return 'offline';
+    const lastActive = new Date(lastActiveAt);
+    const diffInMinutes = (currentTime - lastActive) / (1000 * 60);
+
+    if (diffInMinutes <= 5) return 'online';
+    if (diffInMinutes <= 30) return 'away';
+    return 'offline';
+  };
 
   useEffect(() => {
     if (isLive) {
@@ -70,8 +86,20 @@ const LeaderboardTable = ({ data = [], currentUserId = 'user-1', showTrends = tr
                 <td className="p-4"><div className="flex items-center gap-2">{getRankIcon(user?.rank)}{user?.id === currentUserId && <Icon name="User" size={16} className="text-primary" />}</div></td>
                 <td className="p-4">
                   <div className="flex items-center gap-3">
-                    <div className="relative"><Image src={user?.avatar} alt={user?.name} className="w-10 h-10 rounded-full object-cover" /><div className={`absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2 border-card ${user?.isOnline ? 'bg-success' : 'bg-muted-foreground'}`} /></div>
-                    <div><div className="font-semibold text-foreground">{user?.name}</div><div className="text-sm text-muted-foreground">{user?.department}</div></div>
+                    <div className="relative">
+                      {user?.avatar ? (
+                        <Image src={user?.avatar} alt={user?.name} className="w-10 h-10 rounded-full object-cover" />
+                      ) : (
+                        <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-sm">
+                          {user?.name ? user.name.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase() : '??'}
+                        </div>
+                      )}
+                      <div className={`absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2 border-card ${
+                        determineStatus(user?.lastActiveAt) === 'online' ? 'bg-success' : 
+                        determineStatus(user?.lastActiveAt) === 'away' ? 'bg-warning' : 'bg-muted-foreground'
+                      }`} />
+                    </div>
+                    <div><div className="font-semibold text-foreground">{user?.name}</div><div className="text-sm text-muted-foreground">{typeof user?.department === 'object' ? user?.department?.name : user?.department}</div></div>
                   </div>
                 </td>
                 <td className="p-4">
@@ -90,7 +118,7 @@ const LeaderboardTable = ({ data = [], currentUserId = 'user-1', showTrends = tr
                     </div>
                   </td>
                 )}
-                <td className="p-4"><div className="text-sm text-muted-foreground">{user?.lastActivity}</div></td>
+                <td className="p-4"><div className="text-sm text-muted-foreground">{user?.lastActiveAt ? new Date(user.lastActiveAt).toLocaleTimeString() : 'Never'}</div></td>
               </tr>
             ))}
           </tbody>

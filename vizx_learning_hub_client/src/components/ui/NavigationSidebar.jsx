@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
+import { useNotifications } from '../../contexts/NotificationContext';
 import Icon from '../AppIcon';
 
 const NavigationSidebar = ({ isCollapsed = false }) => {
@@ -8,15 +10,25 @@ const NavigationSidebar = ({ isCollapsed = false }) => {
   const navigate = useNavigate();
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const { user, hasRole, logout } = useAuth();
+  const { chatUnreadCount, unreadCount } = useNotifications();
   
   const navigationItems = [
     { section: 'My Learning', items: [{ label: 'Dashboard', path: '/admin-learning-dashboard', icon: 'LayoutDashboard', roles: ['ADMIN', 'MANAGER'] }] },
     { section: 'Performance Analytics', items: [{ label: 'Cohort Analytics', path: '/cohort-performance-analytics', icon: 'Activity', roles: ['ADMIN', 'MANAGER'] }] },
     { section: 'Games & Challenges', items: [{ label: 'Learning Games', path: '/interactive-learning-games-hub', icon: 'Gamepad2', roles: ['ADMIN', 'MANAGER'] }] },
     { section: 'Competition', items: [{ label: 'Leaderboards', path: '/gamification-leaderboards', icon: 'Trophy', roles: ['ADMIN', 'MANAGER'] }] },
-    { section: 'Content Management', items: [{ label: 'Learning Paths', path: '/learning-path-management', icon: 'BookOpen', roles: ['ADMIN', 'MANAGER'] }] },
+    { section: 'Content Management', items: [
+      { label: 'Learning Paths', path: '/learning-path-management', icon: 'BookOpen', roles: ['ADMIN', 'MANAGER'] },
+      { label: 'Content Categories', path: '/content-categories-management', icon: 'Tags', roles: ['ADMIN', 'MANAGER'] }
+    ] },
     { section: 'System Integration', items: [{ label: 'Content Sync', path: '/learning-content-synchronization', icon: 'RefreshCw', roles: ['ADMIN'] }] },
-    { section: 'User Administration', items: [{ label: 'User Profiles', path: '/user-profile-management', icon: 'Users', roles: ['ADMIN', 'MANAGER'] }] },
+    { section: 'User Administration', items: [
+      { label: 'User Profiles', path: '/user-profile-management', icon: 'Users', roles: ['ADMIN', 'MANAGER'] },
+      { label: 'Departments', path: '/department-management', icon: 'Building', roles: ['ADMIN', 'MANAGER'] }
+    ] },
+    { section: 'Communication', items: [
+      { label: 'Live Chat', path: '/admin-chat', icon: 'MessageSquare', roles: ['ADMIN', 'MANAGER'] }
+    ] },
     { section: 'Notification Manager', items: [{ label: 'Notifications', path: '/notification-management-center', icon: 'Bell', roles: ['ADMIN'] }] },
     { section: 'System Configuration', items: [{ label: 'System Configuration', path: '/administrative-system-configuration', icon: 'Settings', roles: ['ADMIN'] }] }
   ];
@@ -68,11 +80,38 @@ const NavigationSidebar = ({ isCollapsed = false }) => {
 
       <aside className={`fixed left-0 top-0 h-full bg-card border-r border-border z-50 transition-transform duration-300 ease-in-out ${isCollapsed ? 'w-16' : 'w-72'} ${isMobileOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0`}>
         <div className="flex flex-col h-full">
-          <div className="p-6 border-b border-border">
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center"><Icon name="GraduationCap" size={20} color="white" /></div>
-              {!isCollapsed && <div><h1 className="font-semibold text-lg text-foreground">AI Learning Hub</h1><p className="text-xs text-muted-foreground">Enterprise Learning</p></div>}
-            </div>
+          <div className="p-4 border-b border-border">
+            <a 
+              href="/admin-learning-dashboard" 
+              onClick={(e) => { e.preventDefault(); handleNavigation('/admin-learning-dashboard'); }} 
+              className="flex items-center justify-center relative group cursor-pointer h-12"
+            >
+              <AnimatePresence mode="wait">
+                {!isCollapsed ? (
+                  <motion.div 
+                    key="expanded-logo" 
+                    className="flex items-center justify-center px-2 w-full h-full"
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.9 }}
+                    transition={{ duration: 0.2 }}
+                  >
+                    <img src="https://res.cloudinary.com/dvkt0lsqb/image/upload/v1767738897/vizx_academy-updated_kpwfzj.png" alt="Learning Hub" className="h-10 w-auto object-contain" />
+                  </motion.div>
+                ) : (
+                  <motion.div 
+                    key="collapsed-logo" 
+                    className="relative group-hover:scale-110 transition-transform duration-200"
+                    initial={{ opacity: 0, rotate: -90 }}
+                    animate={{ opacity: 1, rotate: 0 }}
+                    exit={{ opacity: 0, rotate: -90 }}
+                    transition={{ duration: 0.3 }}
+                  >
+                    <img src="https://res.cloudinary.com/dvkt0lsqb/image/upload/v1768516447/Untitled_design__4__1-removebg-preview_ivfmvy.png" alt="LH" className="h-8 w-8 object-contain" />
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </a>
           </div>
           <div className="p-4 border-b border-border bg-muted/30">
             <div className="flex items-center gap-3">
@@ -96,10 +135,29 @@ const NavigationSidebar = ({ isCollapsed = false }) => {
                   {!isCollapsed && <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-3">{section.section}</h3>}
                   <div className="space-y-1">
                     {section.items.map((item) => (
-                      <button key={item.path} onClick={() => handleNavigation(item.path)} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left transition-all duration-200 ease-out group ${isActive(item.path) ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground hover:bg-accent'}`}>
-                        <Icon name={item.icon} size={20} className={`${isActive(item.path) ? 'text-primary-foreground' : 'text-current'}`} />
+                      <button key={item.path} onClick={() => handleNavigation(item.path)} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left transition-all duration-200 ease-out group relative ${isActive(item.path) ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground hover:bg-accent'}`}>
+                        <div className="relative">
+                          <Icon name={item.icon} size={20} className={`${isActive(item.path) ? 'text-primary-foreground' : 'text-current'}`} />
+                          {isCollapsed && (
+                            item.label === 'Live Chat' ? chatUnreadCount > 0 : 
+                            item.label === 'Notifications' ? unreadCount > 0 : false
+                          ) && (
+                            <div className="absolute -top-1 -right-1 w-2 h-2 bg-primary rounded-full border border-card" />
+                          )}
+                        </div>
                         {!isCollapsed && <span className="font-medium text-sm">{item.label}</span>}
-                        {isActive(item.path) && <div className="ml-auto"><div className="w-2 h-2 bg-primary-foreground rounded-full opacity-60" /></div>}
+                        {!isCollapsed && (item.label === 'Live Chat' || item.label === 'Notifications') && (
+                          (item.label === 'Live Chat' ? chatUnreadCount : unreadCount) > 0
+                        ) && (
+                          <div className={`ml-auto text-[10px] font-bold h-4 w-4 rounded-full flex items-center justify-center ${isActive(item.path) ? 'bg-primary-foreground text-primary' : 'bg-primary text-primary-foreground'}`}>
+                            {(item.label === 'Live Chat' ? chatUnreadCount : unreadCount) > 9 ? '9+' : (item.label === 'Live Chat' ? chatUnreadCount : unreadCount)}
+                          </div>
+                        )}
+                        {isActive(item.path) && !((item.label === 'Live Chat' || item.label === 'Notifications') && (item.label === 'Live Chat' ? chatUnreadCount : unreadCount) > 0) && (
+                          <div className="ml-auto">
+                            <div className={`w-2 h-2 rounded-full opacity-60 ${isActive(item.path) ? 'bg-primary-foreground' : 'bg-primary'}`} />
+                          </div>
+                        )}
                       </button>
                     ))}
                   </div>

@@ -29,4 +29,8 @@ export class AchievementService {
   static async getActiveAchievements() {
     return await AchievementRepository.findActive();
   }
+
+  static async getRecentAchievements(limit: number = 10) {
+    return await AchievementRepository.findRecent(limit);
+  }
 }

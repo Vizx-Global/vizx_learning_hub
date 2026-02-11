@@ -1,119 +1,116 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../../../../contexts/AuthContext';
+import { MessageSquare } from 'lucide-react';
+import leaderboardService from '../../../../api/leaderboardService';
+import userService from '../../../../api/userService';
 import Icon from '../../../../components/AppIcon';
 
+const getInitials = (name) => {
+  if (!name) return '??';
+  const parts = name.trim().split(' ');
+  if (parts.length >= 2) {
+    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+  }
+  return parts[0].slice(0, 2).toUpperCase();
+};
+
+const UserAvatar = ({ userData, className = "w-10 h-10" }) => {
+  const [imgError, setImgError] = useState(false);
+  const initials = getInitials(userData?.name || `${userData?.firstName} ${userData?.lastName}`);
+
+  if (userData?.avatar && !imgError) {
+    return (
+      <img
+        src={userData.avatar}
+        alt={userData.name}
+        className={`${className} rounded-full object-cover`}
+        onError={() => setImgError(true)}
+      />
+    );
+  }
+
+  return (
+    <div className={`${className} rounded-full bg-primary/10 flex items-center justify-center border border-primary/20 ring-1 ring-primary/5`}>
+      <span className="text-primary font-bold text-xs">{initials}</span>
+    </div>
+  );
+};
+
 const LeaderboardWidget = ({ userRole = 'employee' }) => {
+  const { user } = useAuth();
   const [leaderboardData, setLeaderboardData] = useState([]);
-  const [currentUser, setCurrentUser] = useState(null);
+  const [currentUserData, setCurrentUserData] = useState(null);
   const [timeframe, setTimeframe] = useState('weekly');
   const [isLoading, setIsLoading] = useState(false);
 
-  const mockLeaderboardData = {
-    weekly: [
-      {
-        id: 1,
-        name: "Sarah Chen",
-        avatar: "https://randomuser.me/api/portraits/women/32.jpg",
-        points: 2850,
-        modulesCompleted: 12,
-        streak: 14,
-        rank: 1,
-        change: 2,
-        department: "Engineering"
-      },
-      {
-        id: 2,
-        name: "Michael Rodriguez",
-        avatar: "https://randomuser.me/api/portraits/men/45.jpg",
-        points: 2720,
-        modulesCompleted: 11,
-        streak: 9,
-        rank: 2,
-        change: -1,
-        department: "Product"
-      },
-      {
-        id: 3,
-        name: "Emily Johnson",
-        avatar: "https://randomuser.me/api/portraits/women/28.jpg",
-        points: 2650,
-        modulesCompleted: 10,
-        streak: 12,
-        rank: 3,
-        change: 1,
-        department: "Marketing"
-      },
-      {
-        id: 4,
-        name: "John Doe",
-        avatar: "https://randomuser.me/api/portraits/men/32.jpg",
-        points: 2450,
-        modulesCompleted: 9,
-        streak: 7,
-        rank: 4,
-        change: 0,
-        department: "Sales",
-        isCurrentUser: true
-      },
-      {
-        id: 5,
-        name: "Lisa Wang",
-        avatar: "https://randomuser.me/api/portraits/women/35.jpg",
-        points: 2380,
-        modulesCompleted: 8,
-        streak: 5,
-        rank: 5,
-        change: -2,
-        department: "HR"
-      }
-    ],
-    monthly: [
-      {
-        id: 1,
-        name: "Sarah Chen",
-        avatar: "https://randomuser.me/api/portraits/women/32.jpg",
-        points: 8950,
-        modulesCompleted: 35,
-        streak: 28,
-        rank: 1,
-        change: 0,
-        department: "Engineering"
-      },
-      {
-        id: 4,
-        name: "John Doe",
-        avatar: "https://randomuser.me/api/portraits/men/32.jpg",
-        points: 7450,
-        modulesCompleted: 28,
-        streak: 21,
-        rank: 2,
-        change: 2,
-        department: "Sales",
-        isCurrentUser: true
-      },
-      {
-        id: 2,
-        name: "Michael Rodriguez",
-        avatar: "https://randomuser.me/api/portraits/men/45.jpg",
-        points: 7320,
-        modulesCompleted: 27,
-        streak: 19,
-        rank: 3,
-        change: -1,
-        department: "Product"
-      }
-    ]
-  };
-
   useEffect(() => {
-    setIsLoading(true);
-    // Simulate API call
-    setTimeout(() => {
-      const data = mockLeaderboardData?.[timeframe];
-      setLeaderboardData(data);
-      setCurrentUser(data?.find(user => user?.isCurrentUser));
-      setIsLoading(false);
-    }, 500);
-  }, [timeframe]);
+    const fetchData = async () => {
+      setIsLoading(true);
+      try {
+        const response = await leaderboardService.getLeaderboard(5, timeframe);
+        const data = (response.data || response).map((item, index) => ({
+             id: item.id || item.user?.id,
+             name: item.name || (item.user ? `${item.user.firstName} ${item.user.lastName}` : 'Unknown User'),
+             firstName: item.firstName || item.user?.firstName,
+             lastName: item.lastName || item.user?.lastName,
+             avatar: item.avatar || item.user?.avatar,
+             points: item.points || 0,
+             modulesCompleted: item.modulesCompleted || 0,
+             streak: item.currentStreak || item.user?.currentStreak || 0,
+             rank: item.rank || index + 1,
+             change: item.rankChange || 0,
+             department: item.department || item.user?.department?.name || '',
+             isCurrentUser: (item.id || item.user?.id) === user?.id
+        }));
+        
+        setLeaderboardData(data);
+        
+        // Fetch current user summary for high precision stats if we are the user
+        if (user?.id) {
+          try {
+            const summaryResponse = await userService.getUserActivitySummary(user.id);
+            const summary = summaryResponse.data.data;
+            
+            // Find current user's rank in the top list if it exists
+            const inTopList = data.find(u => u.isCurrentUser);
+            
+            setCurrentUserData({
+              id: user.id,
+              name: `${user.firstName} ${user.lastName}`,
+              firstName: user.firstName,
+              lastName: user.lastName,
+              avatar: user.avatar,
+              points: summary.user.totalPoints || 0,
+              modulesCompleted: summary.summary.completedModules || 0,
+              streak: summary.user.currentStreak || 0,
+              rank: inTopList ? inTopList.rank : '-',
+              department: user.department?.name || (typeof user.department === 'string' ? user.department : 'General')
+            });
+          } catch (err) {
+            console.error('Failed to fetch user activity summary', err);
+            // Fallback to basic user data if summary fails
+            setCurrentUserData({
+              id: user.id,
+              name: `${user.firstName} ${user.lastName}`,
+              avatar: user.avatar,
+              points: user.totalPoints || 0,
+              modulesCompleted: user.completedModules || 0,
+              streak: user.currentStreak || 0,
+              rank: '-',
+              department: user.department?.name || 'General'
+            });
+          }
+        }
+      } catch (error) {
+        console.error('Failed to fetch leaderboard widget data', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [timeframe, user]);
 
   const getRankIcon = (rank) => {
     switch (rank) {
@@ -132,8 +129,7 @@ const LeaderboardWidget = ({ userRole = 'employee' }) => {
 
   return (
     <div className="space-y-6">
-      {/* Leaderboard Widget */}
-      <div className="bg-card rounded-xl border border-border p-6">
+      <div className="bg-card rounded-xl border border-border p-6 shadow-sm">
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 bg-warning/10 rounded-full flex items-center justify-center">
@@ -145,20 +141,19 @@ const LeaderboardWidget = ({ userRole = 'employee' }) => {
             </div>
           </div>
           
-          {/* Timeframe Toggle */}
           <div className="flex bg-muted rounded-lg p-1">
             <button
               onClick={() => setTimeframe('weekly')}
-              className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${
-                timeframe === 'weekly' ?'bg-card text-foreground shadow-sm' :'text-muted-foreground hover:text-foreground'
+              className={`px-3 py-1 text-xs font-medium rounded-md transition-all ${
+                timeframe === 'weekly' ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
               }`}
             >
               Week
             </button>
             <button
               onClick={() => setTimeframe('monthly')}
-              className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${
-                timeframe === 'monthly' ?'bg-card text-foreground shadow-sm' :'text-muted-foreground hover:text-foreground'
+              className={`px-3 py-1 text-xs font-medium rounded-md transition-all ${
+                timeframe === 'monthly' ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
               }`}
             >
               Month
@@ -166,10 +161,9 @@ const LeaderboardWidget = ({ userRole = 'employee' }) => {
           </div>
         </div>
 
-        {/* Loading State */}
         {isLoading ? (
           <div className="space-y-3">
-            {[1, 2, 3, 4, 5]?.map((i) => (
+            {[1, 2, 3, 4, 5].map((i) => (
               <div key={i} className="flex items-center gap-3 p-3 animate-pulse">
                 <div className="w-10 h-10 bg-muted rounded-full" />
                 <div className="flex-1 space-y-2">
@@ -182,68 +176,61 @@ const LeaderboardWidget = ({ userRole = 'employee' }) => {
           </div>
         ) : (
           <div className="space-y-2">
-            {leaderboardData?.map((user) => {
-              const rankConfig = getRankIcon(user?.rank);
-              const changeConfig = getChangeIndicator(user?.change);
+            {leaderboardData.map((item) => {
+              const rankConfig = getRankIcon(item.rank);
+              const changeConfig = getChangeIndicator(item.change);
               
               return (
                 <div 
-                  key={user?.id} 
+                  key={item.id} 
                   className={`
                     flex items-center gap-3 p-3 rounded-lg transition-all duration-200
-                    ${user?.isCurrentUser 
-                      ? 'bg-primary/5 border border-primary/20 ring-1 ring-primary/10' :'hover:bg-accent/50'
+                    ${item.isCurrentUser 
+                      ? 'bg-primary/5 border border-primary/20 ring-1 ring-primary/10 shadow-sm' 
+                      : 'hover:bg-accent/50'
                     }
                   `}
                 >
-                  {/* Rank */}
                   <div className="flex items-center gap-2 w-8">
-                    <span className="text-sm font-bold text-foreground">#{user?.rank}</span>
-                    <Icon name={rankConfig?.icon} size={16} className={rankConfig?.color} />
+                    <span className="text-sm font-bold text-foreground">#{item.rank}</span>
+                    <Icon name={rankConfig.icon} size={16} className={rankConfig.color} />
                   </div>
-                  {/* Avatar */}
-                  <div className="relative">
-                    <img 
-                      src={user?.avatar} 
-                      alt={user?.name}
-                      className="w-10 h-10 rounded-full object-cover"
-                    />
-                    {user?.streak > 0 && (
-                      <div className="absolute -top-1 -right-1 w-5 h-5 bg-warning rounded-full flex items-center justify-center">
-                        <Icon name="Flame" size={10} className="text-white" />
-                      </div>
-                    )}
-                  </div>
-                  {/* User Info */}
+                  
+                  <UserAvatar userData={item} />
+                  
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
-                      <span className={`text-sm font-medium truncate ${
-                        user?.isCurrentUser ? 'text-primary' : 'text-foreground'
+                      <span className={`text-sm font-semibold truncate ${
+                        item.isCurrentUser ? 'text-primary' : 'text-foreground'
                       }`}>
-                        {user?.name}
-                        {user?.isCurrentUser && (
-                          <span className="text-xs text-primary ml-1">(You)</span>
+                        {item.name}
+                        {item.isCurrentUser && (
+                          <span className="text-[10px] bg-primary/10 text-primary px-1.5 py-0.5 rounded ml-1 font-bold">YOU</span>
                         )}
                       </span>
                     </div>
-                    <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                      <span>{user?.department}</span>
-                      <span>•</span>
+                    <div className="flex items-center gap-2 text-[10px] uppercase tracking-wider font-medium text-muted-foreground">
+                      {item.department && (
+                        <>
+                          <span className="truncate max-w-[80px]">{item.department}</span>
+                          <span className="opacity-50">•</span>
+                        </>
+                      )}
                       <div className="flex items-center gap-1">
-                        <Icon name="BookOpen" size={12} />
-                        <span>{user?.modulesCompleted} modules</span>
+                        <Icon name="BookOpen" size={10} />
+                        <span>{item.modulesCompleted} Modules</span>
                       </div>
                     </div>
                   </div>
-                  {/* Points and Change */}
+                  
                   <div className="text-right">
                     <div className="text-sm font-bold text-foreground">
-                      {user?.points?.toLocaleString()}
+                      {item.points.toLocaleString()}
                     </div>
                     <div className="flex items-center gap-1 justify-end">
-                      <Icon name={changeConfig?.icon} size={12} className={changeConfig?.color} />
-                      <span className={`text-xs font-medium ${changeConfig?.color}`}>
-                        {changeConfig?.text}
+                      <Icon name={changeConfig.icon} size={10} className={changeConfig.color} />
+                      <span className={`text-[10px] font-bold ${changeConfig.color}`}>
+                        {changeConfig.text}
                       </span>
                     </div>
                   </div>
@@ -253,48 +240,45 @@ const LeaderboardWidget = ({ userRole = 'employee' }) => {
           </div>
         )}
 
-        {/* View Full Leaderboard */}
         <div className="mt-4 pt-4 border-t border-border">
-          <button className="w-full text-sm text-primary hover:text-primary/80 font-medium transition-colors">
+          <button className="w-full text-xs text-primary hover:text-primary/80 font-bold transition-colors uppercase tracking-widest">
             View Full Leaderboard →
           </button>
         </div>
       </div>
-      {/* Current User Stats */}
-      {currentUser && (
-        <div className="bg-gradient-to-r from-primary/5 to-secondary/5 rounded-xl border border-primary/20 p-6">
-          <div className="flex items-center gap-4 mb-4">
-            <img 
-              src={currentUser?.avatar} 
-              alt={currentUser?.name}
-              className="w-12 h-12 rounded-full object-cover ring-2 ring-primary/20"
-            />
+
+      {currentUserData && (
+        <div className="bg-gradient-to-br from-primary/10 via-card to-secondary/10 rounded-xl border border-primary/30 p-6 shadow-md">
+          <div className="flex items-center gap-4 mb-6">
+            <UserAvatar userData={currentUserData} className="w-14 h-14 ring-4 ring-primary/20 shadow-lg" />
             <div>
-              <h4 className="font-semibold text-foreground">Your Performance</h4>
-              <p className="text-sm text-muted-foreground">
-                Rank #{currentUser?.rank} • {currentUser?.department}
-              </p>
+              <h4 className="font-bold text-foreground text-lg">Your Performance</h4>
+              <div className="flex items-center gap-2 text-sm text-muted-foreground font-medium">
+                <span className="text-primary font-bold">Rank {currentUserData.rank !== '-' ? `#${currentUserData.rank}` : 'Unranked'}</span>
+                <span>•</span>
+                <span>{currentUserData.department}</span>
+              </div>
             </div>
           </div>
           
-          <div className="grid grid-cols-3 gap-4">
-            <div className="text-center">
-              <div className="text-2xl font-bold text-primary mb-1">
-                {currentUser?.points?.toLocaleString()}
+          <div className="grid grid-cols-3 gap-2">
+            <div className="bg-card/50 rounded-lg p-3 text-center border border-border/50">
+              <div className="text-xl font-black text-primary mb-0.5">
+                {currentUserData.points.toLocaleString()}
               </div>
-              <div className="text-xs text-muted-foreground">Points</div>
+              <div className="text-[10px] uppercase font-bold text-muted-foreground tracking-tighter">Points</div>
             </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-success mb-1">
-                {currentUser?.modulesCompleted}
+            <div className="bg-card/50 rounded-lg p-3 text-center border border-border/50">
+              <div className="text-xl font-black text-success mb-0.5">
+                {currentUserData.modulesCompleted}
               </div>
-              <div className="text-xs text-muted-foreground">Modules</div>
+              <div className="text-[10px] uppercase font-bold text-muted-foreground tracking-tighter">Modules</div>
             </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-warning mb-1">
-                {currentUser?.streak}
+            <div className="bg-card/50 rounded-lg p-3 text-center border border-border/50">
+              <div className="text-xl font-black text-warning mb-0.5">
+                {currentUserData.streak}
               </div>
-              <div className="text-xs text-muted-foreground">Day Streak</div>
+              <div className="text-[10px] uppercase font-bold text-muted-foreground tracking-tighter">Streak</div>
             </div>
           </div>
         </div>

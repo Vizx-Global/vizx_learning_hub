@@ -58,7 +58,7 @@ const LearningPaths = () => {
           pointsReward: path.pointsReward || 0,
           enrolledCount: path.enrollmentCount || path.enrolledCount || 0,
           completionRate: enrollment ? `${Math.round(enrollment.progress)}%` : '0%',
-          category: path.category || 'General',
+          category: path.categoryRef?.name || path.category || 'General',
           difficulty: path.difficulty 
             ? path.difficulty.charAt(0).toUpperCase() + path.difficulty.slice(1).toLowerCase() 
             : 'Beginner',

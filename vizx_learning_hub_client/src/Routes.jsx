@@ -13,9 +13,15 @@ import GamificationLeaderboards from './pages/Administrator/admin-gamification-l
 import PerformanceAnalytics from './pages/Administrator/admin-cohort-performance-analytics';
 import AdminSystemConfiguration from './pages/Administrator/administrative-system-configuration/index';
 import NotificationManagementCenter from "./pages/Administrator/admin-notification-management-center";
+import ContentCategoriesManagement from "./pages/Administrator/admin-content-categories-management";
+import DepartmentManagement from "./pages/Administrator/admin-department-management";
+import AdminChat from "./pages/Administrator/admin-chat/index";
 import RegistrationForm from "./pages/Authentication/SignUp";
+
 import LoginForm from "./pages/Authentication/SignIn";
+import VerifyEmail from "./pages/Authentication/VerifyEmail";
 import LandingPage from "./pages/landing-page/index";
+import PublicLearningPathDetail from "./pages/landing-page/LearningPathDetail";
 import EmployeeLayout from "./layouts/EmployeeLayout";
 import EmployeeDashboard from "./pages/Employees/Dashboard/Dashboard";
 import EmployeeCourses from "./pages/Employees/Courses/MyCourses";
@@ -25,6 +31,8 @@ import EmployeeLeaderboards from "./pages/Employees/Community/Leaderboard";
 import EmployeeGames from "./pages/Employees/Games/Games";
 import EmployeeProfile from "./pages/Employees/User-Profile/Profile";
 import Notifications from "./pages/Employees/Notification/Notifications";
+import EmployeeChat from "./pages/Employees/Chat/Chat";
+import UserProfile from "./pages/UserProfile/Profile";
 import { ThemeProvider } from "./components/ThemeProvider";
 
 const Routes = () => {
@@ -35,8 +43,14 @@ const Routes = () => {
           <ScrollToTop />
           <RouterRoutes>
             <Route path="/" element={<LandingPage />} />
+            <Route path="/learning-paths/:id" element={<PublicLearningPathDetail />} />
             <Route path="/register" element={<RegistrationForm />} />
+            <Route path="/verify-email" element={<VerifyEmail />} />
             <Route path="/login" element={<LoginForm />} />
+            
+            {/* Authenticated User Profile (Public Layout) */}
+            <Route element={<ProtectedRoute><UserProfile /></ProtectedRoute>} path="/profile" />
+
             <Route path="/admin-learning-dashboard" element={<AdminDashboard />} />
             <Route path="/learning-path-management" element={<LearningPathManagement />} />
             <Route path="/learning-content-synchronization" element={<LearningContentSynchronization />} />
@@ -46,6 +60,9 @@ const Routes = () => {
             <Route path="/cohort-performance-analytics" element={<PerformanceAnalytics />} />
             <Route path="/administrative-system-configuration" element={<AdminSystemConfiguration />} />
             <Route path="/notification-management-center" element={<NotificationManagementCenter />} />
+            <Route path="/content-categories-management" element={<ContentCategoriesManagement />} />
+            <Route path="/department-management" element={<DepartmentManagement />} />
+            <Route path="/admin-chat" element={<ProtectedRoute requiredRole="ADMIN"><AdminChat /></ProtectedRoute>} />
             <Route element={
               <ProtectedRoute requiredRole="EMPLOYEE">
                 <EmployeeLayout />
@@ -60,6 +77,7 @@ const Routes = () => {
               <Route path="/employee-notifications" element={<Notifications />} />
               <Route path="/employee-profile" element={<EmployeeProfile />} />
             </Route>
+            <Route path="/employee-chat" element={<ProtectedRoute requiredRole="EMPLOYEE"><EmployeeChat /></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />
           </RouterRoutes>
         </ErrorBoundary>

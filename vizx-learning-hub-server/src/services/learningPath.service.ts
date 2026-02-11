@@ -7,8 +7,10 @@ export interface CreateLearningPathData {
   title: string;
   description: string;
   shortDescription?: string;
-  category: string;
+  category?: string;
+  categoryId?: string;
   subcategory?: string;
+  subCategoryId?: string;
   difficulty?: 'BEGINNER' | 'INTERMEDIATE' | 'ADVANCED' | 'EXPERT';
   estimatedHours: number;
   minEstimatedHours?: number;
@@ -27,7 +29,7 @@ export interface CreateLearningPathData {
 
 export class LearningPathService {
   async createLearningPath(data: CreateLearningPathData, createdBy: string): Promise<LearningPath> {
-    if (!data.title || !data.description || !data.category) {
+    if (!data.title || !data.description || (!data.category && !data.categoryId)) {
       throw new ValidationError('Title, description, and category are required');
     }
 
@@ -36,8 +38,10 @@ export class LearningPathService {
       throw new ValidationError('A learning path with this title already exists');
     }
 
-    const learningPathData: Prisma.LearningPathCreateInput = {
-      ...data,
+    const { category, subcategory, categoryId, subCategoryId, ...sanitizedData } = data;
+
+    const learningPathData: any = {
+      ...sanitizedData,
       slug,
       difficulty: data.difficulty || 'BEGINNER',
       prerequisites: data.prerequisites || [],
@@ -46,7 +50,9 @@ export class LearningPathService {
       skills: data.skills || [],
       isPublic: data.isPublic ?? true,
       isFeatured: data.isFeatured ?? false,
-      creator: { connect: { id: createdBy } }
+      creator: { connect: { id: createdBy } },
+      ...(categoryId && { categoryRef: { connect: { id: categoryId } } }),
+      ...(subCategoryId && { subcategoryRef: { connect: { id: subCategoryId } } }),
     };
 
     return await LearningPathRepository.create(learningPathData);
@@ -105,13 +111,27 @@ export class LearningPathService {
 
   async updateLearningPath(id: string, data: any): Promise<LearningPath> {
     await this.getLearningPathById(id);
+    const { categoryId, subCategoryId, ...updateData } = data;
+    
+    const transformedData: any = { ...updateData };
+    
     if (data.title) {
       const slug = this.generateSlug(data.title);
       if (await LearningPathRepository.isSlugTaken(slug, id)) {
         throw new ValidationError('A learning path with this title already exists');
       }
+      transformedData.slug = slug;
     }
-    return await LearningPathRepository.update(id, data);
+
+    if (categoryId) {
+      transformedData.categoryRef = { connect: { id: categoryId } };
+    }
+    
+    if (subCategoryId) {
+      transformedData.subcategoryRef = { connect: { id: subCategoryId } };
+    }
+
+    return await LearningPathRepository.update(id, transformedData);
   }
 
   async deleteLearningPath(id: string): Promise<LearningPath> {

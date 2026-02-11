@@ -1,5 +1,6 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import axiosClient from '../utils/axiosClient';
+import userService from '../api/userService';
 
 const AuthContext = createContext();
 
@@ -58,6 +59,15 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  const verifyEmail = async (userId, code) => {
+    try {
+      await axiosClient.post('/auth/verify-email', { userId, code });
+      return { success: true };
+    } catch (error) {
+      return { success: false, error: error.response?.data?.message || 'Verification failed' };
+    }
+  };
+
   const logout = async (shouldRedirect = true) => {
     try {
       await axiosClient.post('/auth/logout');
@@ -79,6 +89,20 @@ export const AuthProvider = ({ children }) => {
       return { success: true, user: updatedUser };
     } catch (error) {
       return { success: false, error: error.response?.data?.message || 'Profile update failed' };
+    }
+  };
+
+  const uploadUserAvatar = async (file) => {
+    try {
+      const formData = new FormData();
+      formData.append('avatar', file);
+      const response = await userService.uploadAvatar(user.id, formData);
+      const updatedUser = response.data.data.user;
+      localStorage.setItem('user', JSON.stringify(updatedUser));
+      setUser(updatedUser);
+      return { success: true, user: updatedUser };
+    } catch (error) {
+      return { success: false, error: error.response?.data?.message || 'Avatar upload failed' };
     }
   };
 
@@ -109,7 +133,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, isAuthenticated, login, register, logout, updateProfile, changePassword, hasRole, hasPermission, checkAuthStatus }}>
+    <AuthContext.Provider value={{ user, loading, isAuthenticated, login, register, verifyEmail, logout, updateProfile, uploadUserAvatar, changePassword, hasRole, hasPermission, checkAuthStatus }}>
       {children}
     </AuthContext.Provider>
   );

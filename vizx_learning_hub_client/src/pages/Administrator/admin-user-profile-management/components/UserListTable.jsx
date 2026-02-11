@@ -3,6 +3,28 @@ import Icon from '../../../../components/AppIcon';
 import Image from '../../../../components/AppImage';
 import UserActionsModal from './UserActionsModal';
 
+const UserAvatar = ({ avatar, name, className }) => {
+  const [imgError, setImgError] = useState(false);
+  const initials = name ? name.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase() : '??';
+
+  return (
+    <div className={className}>
+      {avatar && !imgError ? (
+        <Image
+          src={avatar}
+          alt={name}
+          className="w-full h-full object-cover"
+          onError={() => setImgError(true)}
+        />
+      ) : (
+        <span className="text-primary font-bold text-sm">
+          {initials}
+        </span>
+      )}
+    </div>
+  );
+};
+
 const UserListTable = ({ 
   users, 
   onUserSelect, 
@@ -38,13 +60,13 @@ const UserListTable = ({
       email: user?.email || '',
       employeeId: user?.employeeId || '',
       phone: user?.phone || '',
-      department: user?.department || 'Not assigned',
+      department: user?.department?.name || (typeof user?.department === 'string' ? user.department : 'Not assigned'),
       role: user?.role || 'EMPLOYEE',
       jobTitle: user?.jobTitle || 'Employee',
       status: user?.status || 'PENDING',
       level: user?.level || 'Beginner',
       avatar: user?.avatar || '',
-      lastActive: user?.lastActive || user?.lastLoginAt || 'Never',
+      lastActive: user?.lastActiveDate || user?.lastLoginAt || 'Never',
       overallProgress: user?.overallProgress ?? 0,
       totalModules: user?.totalModules ?? 0,
       currentLevel: user?.currentLevel || 1,
@@ -281,27 +303,11 @@ const UserListTable = ({
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full overflow-hidden bg-muted flex-shrink-0 border-2 border-transparent group-hover:border-primary/20 transition-colors">
-                        {user.avatar ? (
-                          <Image
-                            src={user.avatar}
-                            alt={user.name}
-                            className="w-full h-full object-cover"
-                            onError={(e) => {
-                              // Fallback to initials if image fails to load
-                              e.target.style.display = 'none';
-                              e.target.nextSibling.style.display = 'flex';
-                            }}
-                          />
-                        ) : null}
-                        <div 
-                          className={`w-full h-full bg-primary flex items-center justify-center ${user.avatar ? 'hidden' : 'flex'}`}
-                        >
-                          <span className="text-white font-semibold text-sm">
-                            {user.firstName?.[0]}{user.lastName?.[0]}
-                          </span>
-                        </div>
-                      </div>
+                      <UserAvatar 
+                        avatar={user.avatar} 
+                        name={user.name} 
+                        className="w-10 h-10 rounded-full overflow-hidden bg-primary/10 flex items-center justify-center flex-shrink-0 border-2 border-transparent group-hover:border-primary/20 transition-colors" 
+                      />
                       <div className="min-w-0 flex-1">
                         <div className="font-medium text-foreground truncate">{user.name}</div>
                         <div className="text-sm text-muted-foreground truncate">{user.email}</div>

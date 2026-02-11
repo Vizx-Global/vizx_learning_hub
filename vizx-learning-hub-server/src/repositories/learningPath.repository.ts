@@ -10,7 +10,7 @@ export class LearningPathRepository {
       
       return await prisma.learningPath.create({
         data: {
-          ...data,
+          ...data as any,
           slug,
           source: data.source || 'CUSTOM',
           status: data.status || 'DRAFT',
@@ -18,6 +18,10 @@ export class LearningPathRepository {
           enrollmentCount: data.enrollmentCount || 0,
           completionCount: data.completionCount || 0,
           ratingCount: data.ratingCount || 0,
+        },
+        include: {
+          categoryRef: true,
+          subcategoryRef: true
         }
       });
     } catch (error: any) {
@@ -29,14 +33,18 @@ export class LearningPathRepository {
         throw new DatabaseError('Invalid user reference', error);
       }
       
-      throw new DatabaseError('Failed to create learning path', error);
+      throw new DatabaseError(`Failed to create learning path: ${error.message}`, error);
     }
   }
 
   static async findById(id: string): Promise<LearningPath | null> {
     try {
       return await prisma.learningPath.findUnique({
-        where: { id }
+        where: { id },
+        include: {
+          categoryRef: true,
+          subcategoryRef: true
+        }
       });
     } catch (error) {
       console.error('Database error in findById:', error);
@@ -47,7 +55,11 @@ export class LearningPathRepository {
   static async findBySlug(slug: string): Promise<LearningPath | null> {
     try {
       return await prisma.learningPath.findUnique({
-        where: { slug }
+        where: { slug },
+        include: {
+          categoryRef: true,
+          subcategoryRef: true
+        }
       });
     } catch (error) {
       console.error('Database error in findBySlug:', error);
@@ -59,6 +71,7 @@ export class LearningPathRepository {
     page: number;
     limit: number;
     category?: string;
+    categoryId?: string;
     difficulty?: DifficultyLevel;
     status?: LearningPathStatus;
     isFeatured?: boolean;
@@ -73,6 +86,7 @@ export class LearningPathRepository {
         page,
         limit,
         category,
+        categoryId,
         difficulty,
         status,
         isFeatured,
@@ -83,10 +97,14 @@ export class LearningPathRepository {
 
       const skip = (page - 1) * limit;
 
-      const where: Prisma.LearningPathWhereInput = {};
+      const where: any = {};
 
       if (category) {
-        where.category = { contains: category, mode: 'insensitive' };
+        where.categoryRef = { name: { contains: category, mode: 'insensitive' } };
+      }
+
+      if (categoryId) {
+        where.categoryId = categoryId;
       }
 
       if (difficulty) {
@@ -106,7 +124,7 @@ export class LearningPathRepository {
           { title: { contains: search, mode: 'insensitive' } },
           { description: { contains: search, mode: 'insensitive' } },
           { shortDescription: { contains: search, mode: 'insensitive' } },
-          { category: { contains: search, mode: 'insensitive' } }
+          { categoryRef: { name: { contains: search, mode: 'insensitive' } } }
         ];
       }
 
@@ -117,7 +135,11 @@ export class LearningPathRepository {
           where,
           skip,
           take: limit,
-          orderBy: { [sortBy]: sortOrder }
+          orderBy: { [sortBy]: sortOrder },
+          include: {
+            categoryRef: true,
+            subcategoryRef: true
+          }
         }),
         prisma.learningPath.count({ where })
       ]);
@@ -146,7 +168,11 @@ export class LearningPathRepository {
 
       return await prisma.learningPath.update({
         where: { id },
-        data
+        data,
+        include: {
+          categoryRef: true,
+          subcategoryRef: true
+        }
       });
     } catch (error: any) {
       console.error('Database error in update:', error);
@@ -177,7 +203,7 @@ export class LearningPathRepository {
 
   static async updateStatus(id: string, status: LearningPathStatus): Promise<LearningPath> {
     try {
-      const data: Prisma.LearningPathUpdateInput = { status };
+      const data: any = { status };
 
       if (status === 'PUBLISHED') {
         data.publishedAt = new Date();
@@ -283,7 +309,7 @@ export class LearningPathRepository {
           title: true,
           status: true,
           difficulty: true,
-          category: true,
+          categoryId: true,
           isFeatured: true,
           createdAt: true
         }

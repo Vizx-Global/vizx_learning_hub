@@ -150,7 +150,7 @@ export class UserService {
       where: { userId },
       include: {
         learningPath: {
-          select: { id: true, title: true, category: true, difficulty: true, estimatedHours: true }
+          select: { id: true, title: true, categoryRef: { select: { name: true } }, difficulty: true, estimatedHours: true }
         },
         moduleProgress: {
           include: {

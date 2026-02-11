@@ -77,7 +77,7 @@ const HeroSection = () => {
             </motion.div>
           </div>
           <div className="relative">
-            <div className="absolute -top-6 -left-6 lg:-top-12 lg:-left-12 z-10">
+            <div className="hidden lg:block absolute -top-6 -left-6 lg:-top-12 lg:-left-12 z-10">
               <div className="relative bg-card rounded-2xl shadow-2xl border border-border p-6 w-64">
                 <AnimatePresence mode="wait">
                   <motion.div key={currentMetric} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.3 }} className="text-center">
@@ -103,7 +103,7 @@ const HeroSection = () => {
             </div>
             <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.7, delay: 0.3 }} className="relative rounded-3xl overflow-hidden shadow-2xl border border-border bg-gradient-to-br from-card to-popover">
               <div className="aspect-[4/3] relative"><img src="https://res.cloudinary.com/dtrad03yv/image/upload/v1758214719/rpo-improvement_lokryy.jpg" alt="RPO Improvement" className="w-full h-full object-cover" /></div>
-              <div className="absolute -bottom-6 -right-6 lg:-bottom-12 lg:-right-12">
+              <div className="hidden lg:block absolute -bottom-6 -right-6 lg:-bottom-12 lg:-right-12">
                 <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.6 }} className="bg-card rounded-2xl shadow-2xl border border-border p-4 w-64">
                   <h3 className="font-semibold text-foreground mb-3">Popular Learning Paths</h3>
                   <div className="space-y-3">

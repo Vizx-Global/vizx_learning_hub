@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { JWTUtil } from '../utils/jwt.util';
+import prisma from '../database';
 
 export interface AuthRequest extends Request {
   user?: {
@@ -27,7 +28,14 @@ export const authenticate = (req: AuthRequest, res: Response, next: NextFunction
     const decoded = JWTUtil.verifyAccessToken(token);
     
     req.user = decoded;
-    next();
+
+    // Track user activity asynchronously
+    prisma.user.update({
+      where: { id: decoded.userId },
+      data: { lastActiveDate: new Date() }
+    }).catch(err => console.error('Error updating lastActiveDate:', err));
+
+    return next();
   } catch (error) {
     return res.status(401).json({
       success: false,
@@ -52,7 +60,7 @@ export const authorize = (...roles: string[]) => {
       });
     }
 
-    next();
+    return next();
   };
 };
 

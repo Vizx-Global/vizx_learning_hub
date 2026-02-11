@@ -87,7 +87,6 @@ const CreateModuleModal = ({
     // Required fields
     title: '',
     description: '',
-    category: '',
     estimatedMinutes: 60,
     
     // Content configuration
@@ -269,10 +268,6 @@ const CreateModuleModal = ({
         }
         if (!formData.description.trim()) {
           setError('Module description is required');
-          return false;
-        }
-        if (!formData.category.trim()) {
-          setError('Module category is required');
           return false;
         }
         return true;
@@ -770,7 +765,6 @@ const CreateModuleModal = ({
         learningPathId: learningPathId,
         title: formData.title.trim(),
         description: formData.description.trim(),
-        category: formData.category.trim(),
         estimatedMinutes: parseInt(formData.estimatedMinutes) || 60,
         contentType: contentType,
         difficulty: formData.difficulty,
@@ -947,7 +941,6 @@ const CreateModuleModal = ({
     setFormData({
       title: '',
       description: '',
-      category: '',
       estimatedMinutes: 60,
       contentType: 'TEXT',
       difficulty: 'BEGINNER',
@@ -1092,16 +1085,18 @@ const CreateModuleModal = ({
                 <div className="space-y-4">
                   <div>
                     <label className="block text-sm font-medium text-foreground mb-2">
-                      Category <span className="text-error">*</span>
+                      Difficulty Level
                     </label>
-                    <input
-                      type="text"
-                      name="category"
-                      value={formData.category}
+                    <select
+                      name="difficulty"
+                      value={formData.difficulty}
                       onChange={handleInputChange}
-                      placeholder="Module category"
                       className="w-full px-4 py-2 bg-muted border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-                    />
+                    >
+                      <option value="BEGINNER">Beginner</option>
+                      <option value="INTERMEDIATE">Intermediate</option>
+                      <option value="ADVANCED">Advanced</option>
+                    </select>
                   </div>
 
                   <div>

@@ -143,7 +143,7 @@ export class EnrollmentService {
             estimatedHours: true,
             thumbnailUrl: true,
             difficulty: true,
-            category: true
+            categoryRef: { select: { id: true, name: true } }
           }
         },
         user: { select: { id: true, firstName: true, lastName: true, email: true, avatar: true } }
@@ -166,7 +166,7 @@ export class EnrollmentService {
         where, skip, take: limit,
         orderBy: { [sortBy]: sortOrder },
         include: {
-          learningPath: includePath ? { select: { id: true, title: true, description: true, estimatedHours: true, thumbnailUrl: true, difficulty: true, category: true, enrollmentCount: true, completionCount: true } } : false,
+          learningPath: includePath ? { select: { id: true, title: true, description: true, estimatedHours: true, thumbnailUrl: true, difficulty: true, categoryRef: { select: { id: true, name: true } }, enrollmentCount: true, completionCount: true } } : false,
           moduleProgress: includeProgress ? { select: { id: true, status: true, progress: true, timeSpent: true, startedAt: true, completedAt: true, module: { select: { id: true, title: true, orderIndex: true, estimatedMinutes: true } } } } : false
         }
       }),

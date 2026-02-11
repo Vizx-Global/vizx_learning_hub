@@ -163,7 +163,7 @@ const LearningPathDetail = () => {
 
             <div className="flex items-center gap-3 mb-6">
                <span className="px-3 py-1 bg-primary text-primary-foreground text-xs font-bold rounded-full uppercase tracking-widest">
-                  {path.category}
+                  {path.categoryRef?.name || path.category}
                </span>
                {path.isFeatured && (
                  <span className="px-3 py-1 bg-warning/20 text-warning text-xs font-bold rounded-full border border-warning/30 flex items-center gap-1">

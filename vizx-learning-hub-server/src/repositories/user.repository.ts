@@ -8,7 +8,7 @@ export interface CreateUserData {
   lastName: string;
   employeeId?: string;
   phone?: string;
-  department?: string;
+  departmentId?: string;
   jobTitle?: string;
   managerId?: string;
   role?: UserRole;
@@ -19,7 +19,7 @@ export interface UpdateUserData {
   firstName?: string;
   lastName?: string;
   phone?: string;
-  department?: string;
+  departmentId?: string;
   jobTitle?: string;
   managerId?: string;
   role?: UserRole;
@@ -35,7 +35,7 @@ export interface UpdateUserData {
 export interface UserFilters {
   role?: UserRole;
   status?: UserStatus;
-  department?: string;
+  departmentId?: string;
   search?: string;
 }
 
@@ -115,7 +115,10 @@ export class UserRepository {
         lastName: true,
         employeeId: true,
         phone: true,
-        department: true,
+        departmentId: true,
+        department: {
+          select: { id: true, name: true }
+        },
         jobTitle: true,
         role: true,
         status: true,
@@ -134,7 +137,10 @@ export class UserRepository {
         employeeId: true,
         phone: true,
         avatar: true,
-        department: true,
+        departmentId: true,
+        department: {
+          select: { id: true, name: true }
+        },
         jobTitle: true,
         role: true,
         status: true,
@@ -183,11 +189,7 @@ export class UserRepository {
     const where = {
       ...(filters.role && { role: filters.role }),
       ...(filters.status && { status: filters.status }),
-      ...(filters.department && { 
-        department: { 
-          contains: filters.department
-        } 
-      }),
+      ...(filters.departmentId && { departmentId: filters.departmentId }),
       ...(filters.search && {
         OR: [
           { firstName: { contains: filters.search } },
@@ -211,7 +213,10 @@ export class UserRepository {
           lastName: true,
           employeeId: true,
           phone: true,
-          department: true,
+          departmentId: true,
+          department: {
+            select: { id: true, name: true }
+          },
           jobTitle: true,
           role: true,
           status: true,
@@ -220,6 +225,7 @@ export class UserRepository {
           currentStreak: true,
           createdAt: true,
           lastLoginAt: true,
+          lastActiveDate: true,
           _count: {
             select: {
               moduleProgress: {
@@ -266,7 +272,8 @@ export class UserRepository {
         lastName: true,
         email: true,
         phone: true,
-        department: true,
+        departmentId: true,
+        department: { select: { name: true } }
       },
     });
   }
@@ -293,10 +300,24 @@ export class UserRepository {
     });
   }
 
-  static async updateUser(id: string, userData: UpdateUserData) {
+  static async updateUser(id: string, userData: any) {
+    // Definitive mapping/stripping of fields to match schema
+    const data: any = {};
+    if (userData.firstName !== undefined) data.firstName = userData.firstName;
+    if (userData.lastName !== undefined) data.lastName = userData.lastName;
+    if (userData.email !== undefined) data.email = userData.email;
+    if (userData.phone !== undefined) data.phone = userData.phone;
+    if (userData.phoneNumber !== undefined) data.phone = userData.phoneNumber; // Map phoneNumber to phone if it sneaks in
+    if (userData.avatar !== undefined) data.avatar = userData.avatar;
+    if (userData.departmentId !== undefined) data.departmentId = userData.departmentId;
+    if (userData.jobTitle !== undefined) data.jobTitle = userData.jobTitle;
+    if (userData.role !== undefined) data.role = userData.role;
+    if (userData.status !== undefined) data.status = userData.status;
+    if (userData.managerId !== undefined) data.managerId = userData.managerId;
+
     return prisma.user.update({
       where: { id },
-      data: userData,
+      data,
       select: {
         id: true,
         email: true,
@@ -367,10 +388,10 @@ export class UserRepository {
         _count: true,
       }),
       prisma.user.groupBy({
-        by: ['department'],
+        by: ['departmentId'],
         _count: true,
         where: {
-          department: {
+          departmentId: {
             not: null,
           },
         },
@@ -416,13 +437,9 @@ export class UserRepository {
     return !!user;
   }
 
-  static async getUsersByDepartment(department: string) {
+  static async getUsersByDepartment(departmentId: string) {
     return prisma.user.findMany({
-      where: { 
-        department: { 
-          contains: department
-        } 
-      },
+      where: { departmentId },
       select: {
         id: true,
         firstName: true,
@@ -445,6 +462,7 @@ export class UserRepository {
         email: true,
         employeeId: true,
         phone: true,
+        departmentId: true,
         department: true,
         jobTitle: true,
         role: true,
@@ -481,6 +499,7 @@ export class UserRepository {
         email: true,
         employeeId: true,
         phone: true,
+        departmentId: true,
         department: true,
         jobTitle: true,
         role: true,

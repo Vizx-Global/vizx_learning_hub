@@ -5,7 +5,7 @@ export const updateUserSchema = Joi.object({
   lastName: Joi.string().min(2).max(50).optional(),
   phone: Joi.string().optional().allow(''),
   avatar: Joi.string().uri().optional().allow(''),
-  department: Joi.string().optional().allow(''),
+  departmentId: Joi.string().uuid().optional().allow(null, ''),
   jobTitle: Joi.string().optional().allow(''),
   role: Joi.string().valid('EMPLOYEE', 'MANAGER', 'ADMIN').optional(),
   status: Joi.string().valid('ACTIVE', 'INACTIVE', 'SUSPENDED', 'PENDING').optional(),
@@ -25,6 +25,6 @@ export const userQuerySchema = Joi.object({
   limit: Joi.number().integer().min(1).max(100).default(10),
   role: Joi.string().valid('EMPLOYEE', 'MANAGER', 'ADMIN').optional(),
   status: Joi.string().valid('ACTIVE', 'INACTIVE', 'SUSPENDED', 'PENDING').optional(),
-  department: Joi.string().optional(),
-  search: Joi.string().optional(),
+  departmentId: Joi.string().uuid().optional(),
+  search: Joi.string().optional().allow(''),
 });

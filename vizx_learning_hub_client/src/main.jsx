@@ -8,17 +8,21 @@ import { AuthProvider } from './contexts/AuthContext'
 import { FilterProvider } from './contexts/FilterContext';
 import { NotificationProvider } from './contexts/NotificationContext';
 
+import { SocketProvider } from './contexts/SocketContext';
+
 const queryClient = new QueryClient();
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
       <AuthProvider>  
-        <NotificationProvider>
-      <FilterProvider>
-        <App />
-      </FilterProvider>
-        </NotificationProvider>
+        <SocketProvider>
+          <NotificationProvider>
+            <FilterProvider>
+              <App />
+            </FilterProvider>
+          </NotificationProvider>
+        </SocketProvider>
       </AuthProvider>
     </QueryClientProvider>
   </StrictMode>,

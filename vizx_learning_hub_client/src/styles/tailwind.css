@@ -40,6 +40,10 @@
     --color-success: #16a34a;
     --color-warning: #f59e0b;
     --color-error: #dc2626;
+    --color-error-foreground: #ffffff;
+
+    --color-destructive: #dc2626;
+    --color-destructive-foreground: #ffffff;
 
     --radius: 0.75rem;
   }

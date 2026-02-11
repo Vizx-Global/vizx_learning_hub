@@ -72,7 +72,9 @@ export class ModuleProgressService {
       updateData.progress = 100;
       if (module.completionPoints) {
         updateData.pointsEarned = module.completionPoints;
-        await this.createPointsTransaction(userId, module.completionPoints, 'MODULE_COMPLETION', moduleId, `Completed: ${module.title}`);
+        const { GamificationService } = require('./gamification.service');
+        const gamificationService = new GamificationService(this.prisma);
+        await gamificationService.awardPoints(userId, module.completionPoints, 'MODULE_COMPLETION', moduleId, `Completed: ${module.title}`);
       }
       await this.prisma.activity.create({
         data: {
@@ -179,7 +181,9 @@ export class ModuleProgressService {
     // Award points if path is completed for the first time
     if (newStatus === EnrollmentStatus.COMPLETED && enrollment.status !== EnrollmentStatus.COMPLETED) {
       const points = (enrollment.learningPath as any).completionPoints || 500;
-      await this.createPointsTransaction(
+      const { GamificationService } = require('./gamification.service');
+      const gamificationService = new GamificationService(this.prisma);
+      await gamificationService.awardPoints(
         userId, 
         points, 
         'PATH_COMPLETION', 
@@ -284,9 +288,8 @@ export class ModuleProgressService {
   }
 
   private async createPointsTransaction(userId: string, amount: number, source: string, sourceId: string, description: string) {
-    const user = await this.prisma.user.findUnique({ where: { id: userId }, select: { totalPoints: true } });
-    const newBalance = (user?.totalPoints || 0) + amount;
-    await this.prisma.pointsTransaction.create({ data: { userId, type: 'EARNED', amount, balance: newBalance, source, sourceId, description } });
-    await this.prisma.user.update({ where: { id: userId }, data: { totalPoints: newBalance } });
+    const { GamificationService } = require('./gamification.service');
+    const gamificationService = new GamificationService(this.prisma);
+    await gamificationService.awardPoints(userId, amount, source, sourceId, description);
   }
 }

@@ -18,5 +18,10 @@ router.post('/logout', authenticate, AuthController.logout);
 router.get('/profile', authenticate, AuthController.getProfile);
 router.put('/change-password', authenticate, validate(changePasswordSchema), AuthController.changePassword);
 router.post('/users', authenticate, authorize('ADMIN', 'MANAGER'), validate(createUserSchema), AuthController.createUser);
+router.post('/verify-email', authenticate, (req, res, next) => {
+  // Import VerificationController here to avoid circular dependency if any
+  const { VerificationController } = require('../controllers/verification.controller');
+  return VerificationController.verifyEmail(req, res, next);
+});
 
 export default router;

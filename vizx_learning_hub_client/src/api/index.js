@@ -7,6 +7,9 @@ import moduleProgressService from './moduleProgressService';
 import verificationService from './verificationService';
 import quizService from './quizService';
 import achievementService from './achievementService';
+import departmentService from './departmentService';
+import leaderboardService from './leaderboardService';
+import chatService from './chatService';
 
 export {
     authService,
@@ -17,5 +20,8 @@ export {
     moduleProgressService,
     verificationService,
     quizService,
-    achievementService
+    achievementService,
+    departmentService,
+    leaderboardService,
+    chatService
 };

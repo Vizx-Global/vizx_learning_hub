@@ -77,8 +77,8 @@ const UserSearchAndFilter = ({ onSearch, onFilter, onBulkAction, selectedUsers, 
       try {
         const safeUsers = Array.isArray(users) ? users : [];
         const uniqueDepartments = [...new Set(safeUsers
-          .map(user => user.department)
-          .filter(dept => dept && dept !== 'Not assigned' && dept.trim() !== '')
+          .map(user => typeof user.department === 'object' ? user.department?.name : user.department)
+          .filter(dept => dept && typeof dept === 'string' && dept !== 'Not assigned' && dept.trim() !== '')
         )].sort();
         
         setDepartments(uniqueDepartments);

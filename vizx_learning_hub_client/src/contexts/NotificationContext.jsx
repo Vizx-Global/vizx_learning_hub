@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import notificationService from '../api/notificationService';
+import chatService from '../api/chatService';
 import { useAuth } from './AuthContext';
 
 const NotificationContext = createContext();
@@ -29,6 +30,16 @@ export const NotificationProvider = ({ children }) => {
     refetchInterval: 30000, // Refetch unread count every 30 seconds
   });
 
+  const { data: chatUnreadCount = 0 } = useQuery({
+    queryKey: ['chat', 'unreadCount'],
+    queryFn: async () => {
+      const count = await chatService.getUnreadCount();
+      return count;
+    },
+    enabled: !!user,
+    refetchInterval: 10000, // Refetch chat count more frequently (10s)
+  });
+
   const markAsReadMutation = useMutation({
     mutationFn: (id) => notificationService.markAsRead(id),
     onSuccess: () => {
@@ -53,6 +64,7 @@ export const NotificationProvider = ({ children }) => {
   const value = {
     notifications,
     unreadCount,
+    chatUnreadCount,
     isLoading,
     refetch,
     markAsRead: markAsReadMutation.mutate,

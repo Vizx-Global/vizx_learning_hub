@@ -12,6 +12,8 @@ const userService = {
   updateUser: (id, userData) => axiosClient.put(`/users/${id}`, userData),
   updateUserStatus: (id, status) => axiosClient.patch(`/users/${id}/status`, { status }),
   updateUserRole: (id, role) => axiosClient.patch(`/users/${id}/role`, { role }),
+  getUserActivitySummary: (id) => axiosClient.get(`/users/${id}/activity-summary`),
+  uploadAvatar: (id, formData) => axiosClient.post(`/users/${id}/avatar`, formData, { headers: { 'Content-Type': 'multipart/form-data' } }),
   deleteUser: (id) => axiosClient.delete(`/users/${id}`)
 };
 

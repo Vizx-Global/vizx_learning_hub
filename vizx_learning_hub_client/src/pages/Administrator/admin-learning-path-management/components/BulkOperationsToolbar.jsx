@@ -4,13 +4,18 @@ import Button from '../../../../components/ui/Button';
 import Select from '../../../../components/ui/Select';
 
 const BulkOperationsToolbar = ({ 
-  selectedModules = [], // Changed from selectedPaths to selectedModules
+  selectedItems = [], 
   onBulkAction, 
   onSelectAll, 
   onClearSelection,
-  totalModules = 0, // Changed from totalPaths to totalModules
-  allModules = [] // Added to get all modules for Select All
+  totalItems = 0, 
+  allItems = [],
+  itemLabel = 'items'
 }) => {
+  // Map old prop names for backward compatibility if needed
+  const selectedModules = selectedItems;
+  const totalModules = totalItems;
+  const allModules = allItems;
   const [bulkAction, setBulkAction] = useState('');
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [isSelectAllActive, setIsSelectAllActive] = useState(false);
@@ -122,7 +127,7 @@ const BulkOperationsToolbar = ({
             <div className="flex items-center gap-2">
               <Icon name="CheckSquare" size={20} className="text-primary" />
               <span className="font-medium text-foreground">
-                {selectedModules.length} of {totalModules} modules selected
+                {selectedItems.length} of {totalItems} {itemLabel} selected
               </span>
             </div>
             

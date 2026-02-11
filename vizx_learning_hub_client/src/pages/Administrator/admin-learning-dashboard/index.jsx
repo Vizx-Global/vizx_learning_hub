@@ -110,7 +110,7 @@ const EmployeeLearningDashboard = () => {
                      hasRole('MANAGER') ? 'Manager Dashboard' : 'Learning Dashboard'}
                   </h1>
                   <p className="text-sm text-muted-foreground">
-                    Welcome back, {userInfo.name}! Ready to continue your AI journey?
+                    Welcome back, {userInfo.name}! Ready to continue your learning journey?
                   </p>
                 </div>
               </div>

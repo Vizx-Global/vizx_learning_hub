@@ -147,4 +147,33 @@ export class UserController {
     const preferences = await UserService.updateUserPreferences(id!, req.body);
     return res.json({ success: true, message: 'Preferences updated successfully', data: preferences });
   });
+
+  static uploadAvatar = asyncHandler(async (req: AuthRequest, res: Response) => {
+    const { id } = req.params;
+    
+    if (!req.file) {
+      return res.status(400).json({ success: false, message: 'No file uploaded' });
+    }
+
+    const avatarUrl = `${req.protocol}://${req.get('host')}/uploads/users/avatars/${req.file.filename}`;
+    
+    const updatedUser = await UserService.updateUser(id!, { avatar: avatarUrl }, req.user!.userId);
+
+    res.json({
+      success: true,
+      message: 'Avatar uploaded successfully',
+      data: { user: updatedUser, avatarUrl },
+    });
+  });
+
+  static getUserActivitySummary = asyncHandler(async (req: AuthRequest, res: Response) => {
+    const { id } = req.params;
+
+    if (req.user!.userId !== id && !['ADMIN', 'MANAGER'].includes(req.user!.role)) {
+      return res.status(403).json({ success: false, message: 'Insufficient permissions' });
+    }
+
+    const summary = await UserService.getUserActivitySummary(id!);
+    return res.json({ success: true, data: summary });
+  });
 }

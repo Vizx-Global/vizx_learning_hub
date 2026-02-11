@@ -18,8 +18,11 @@ import verificationRoutes from './src/router/verification.routes';
 import quizRoutes from './src/router/quiz.routes';
 import achievementRoutes from './src/router/achievement.routes';
 import notificationRoutes from './src/router/notification.routes';
+import categoryRoutes from './src/router/category.routes';
+import departmentRoutes from './src/router/department.routes';
 
-dotenv.config();
+
+dotenv.config({ path: path.join(__dirname, '.env') });
 
 const app = express();
 const prisma = new PrismaClient();
@@ -75,6 +78,10 @@ app.use('/api/v1/verification', verificationRoutes);
 app.use('/api/v1/quizzes', quizRoutes);
 app.use('/api/v1/achievements', achievementRoutes);
 app.use('/api/v1/notifications', notificationRoutes);
+app.use('/api/v1/categories', categoryRoutes);
+app.use('/api/v1/departments', departmentRoutes);
+app.use('/api/v1/chat', require('./src/router/chat.routes').default);
+
 app.use('/api/v1/leaderboard', require('./src/router/leaderboard.routes').default);
 
 app.use((req, res) => res.status(404).json({ success: false, message: `Route ${req.method} ${req.originalUrl} not found` }));
@@ -88,7 +95,22 @@ app.use((error: any, req: Request, res: Response, next: NextFunction) => {
   });
 });
 
-app.listen(config.app.port, () => console.log(`API Started on port ${config.app.port}`));
+import { createServer } from 'http';
+import { Server } from 'socket.io';
+import { setupSocket } from './src/utils/socket.handler';
+
+const httpServer = createServer(app);
+const io = new Server(httpServer, {
+  cors: {
+    origin: config.app.corsOrigin,
+    credentials: true,
+  },
+});
+
+app.set('io', io);
+setupSocket(io);
+
+httpServer.listen(config.app.port, () => console.log(`API Started on port ${config.app.port}`));
 
 process.on('SIGINT', async () => { await prisma.$disconnect(); process.exit(0); });
 process.on('SIGTERM', async () => { await prisma.$disconnect(); process.exit(0); });

@@ -17,10 +17,12 @@ router.get('/featured', validate(learningPathQuerySchema, 'query'), learningPath
 router.get('/category/:category', validate(learningPathQuerySchema, 'query'), learningPathController.getLearningPathsByCategory);
 router.get('/slug/:slug', learningPathController.getLearningPathBySlug);
 
-router.use(authenticate);
-
+// Public access to list and details
 router.get('/', validate(learningPathQuerySchema, 'query'), learningPathController.getAllLearningPaths);
 router.get('/:id', learningPathController.getLearningPathById);
+
+router.use(authenticate);
+
 router.post('/', authorize('ADMIN', 'MANAGER', 'CONTENT_CREATOR'), validate(createLearningPathSchema), learningPathController.createLearningPath);
 router.put('/:id', authorize('ADMIN', 'MANAGER', 'CONTENT_CREATOR'), validate(updateLearningPathSchema), learningPathController.updateLearningPath);
 router.delete('/:id', authorize('ADMIN', 'MANAGER'), learningPathController.deleteLearningPath);

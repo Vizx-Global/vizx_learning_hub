@@ -58,6 +58,14 @@ export class AuthService {
     }
 
     const hashedPassword = await BcryptUtil.hashPassword(userData.password);
+    // Ensure System Administrator department exists
+    let systemAdminDept = await prisma.department.findUnique({ where: { name: 'System Administrator' } });
+    if (!systemAdminDept) {
+      systemAdminDept = await prisma.department.create({
+        data: { name: 'System Administrator', description: 'Default department for system administrators' }
+      });
+    }
+
     const user = await prisma.user.create({
       data: {
         ...userData,
@@ -67,7 +75,9 @@ export class AuthService {
         emailVerified: true,
         emailVerifiedAt: new Date(),
         mustChangePassword: false,
-        createdBy: null,
+        department: {
+          connect: { id: systemAdminDept.id }
+        }
       },
       select: {
         id: true,
@@ -97,7 +107,7 @@ export class AuthService {
 
     await this.storeRefreshToken(user.id, refreshToken);
 
-    await EmailService.sendWelcomeEmail(user.email, user.firstName, userData.password, UserRole.ADMIN);
+    await EmailService.sendEmployeeWelcomeEmail(user.email, user.firstName, userData.password);
 
     // Send in-app notification
     await NotificationService.notifyWelcome(user.id, user.firstName);
@@ -139,15 +149,29 @@ export class AuthService {
 
     const hashedPassword = await BcryptUtil.hashPassword(userData.password);
 
+    // Handle department relation
+    let departmentConnect = {};
+    if (userData.department) {
+      const dept = await prisma.department.findUnique({ where: { name: userData.department } });
+      if (dept) {
+        departmentConnect = { department: { connect: { id: dept.id } } };
+      } else {
+         // Create the department if it doesn't exist (optional, or throw error)
+         // For now, let's create it to be safe for the "System Administrator" case or others
+         const newDept = await prisma.department.create({ data: { name: userData.department } });
+         departmentConnect = { department: { connect: { id: newDept.id } } };
+      }
+    }
+
     const user = await prisma.user.create({
       data: {
         ...userData,
         password: hashedPassword,
         role: UserRole.EMPLOYEE,
-        status: UserStatus.ACTIVE,
+        status: UserStatus.VERIFICATION_PENDING,
         emailVerified: false,
         mustChangePassword: false,
-        createdBy: null,
+        ...departmentConnect
       },
       select: {
         id: true,
@@ -177,10 +201,7 @@ export class AuthService {
 
     await this.storeRefreshToken(user.id, refreshToken);
 
-    await EmailService.sendWelcomeEmail(user.email, user.firstName, userData.password, UserRole.EMPLOYEE);
-
-    // Send in-app notification
-    await NotificationService.notifyWelcome(user.id, user.firstName);
+    await this.sendVerificationCode(user.id);
 
     await prisma.auditLog.create({
       data: {
@@ -217,11 +238,8 @@ export class AuthService {
       case UserStatus.SUSPENDED:
         throw new AuthError('Account is suspended.');
       case UserStatus.VERIFICATION_PENDING:
-        if (user.role === UserRole.MANAGER) {
-          await this.sendVerificationCode(user.id);
-          throw new AuthError('Verification code has been resent to your email.');
-        }
-        break;
+        await this.sendVerificationCode(user.id);
+        throw new AuthError('Email verification is required. A new code has been sent.');
       case UserStatus.PENDING:
         throw new AuthError('Account is pending approval.');
     }
@@ -231,14 +249,23 @@ export class AuthService {
       throw new AuthError('Invalid email or password');
     }
 
+    /* 
     if (user.mustChangePassword) {
       throw new AuthError('Password change required.');
     }
+    */
+
+    const isFirstLogin = !user.lastLoginAt;
 
     await UserRepository.update(user.id, {
       lastLoginAt: new Date(),
       lastActiveDate: new Date(),
     });
+
+    if (isFirstLogin) {
+      await EmailService.sendWelcomeEmail(user.email, user.firstName);
+      await NotificationService.notifyWelcome(user.id, user.firstName);
+    }
 
     const tokenPayload: TokenPayload = {
       userId: user.id,
@@ -290,26 +317,28 @@ export class AuthService {
       throw new AuthError('User already exists');
     }
 
-    const tempPassword = crypto.randomBytes(8).toString('hex');
-    const hashedPassword = await BcryptUtil.hashPassword(tempPassword);
+    const passwordToUse = userData.password || crypto.randomBytes(8).toString('hex');
+    const hashedPassword = await BcryptUtil.hashPassword(passwordToUse);
 
-    const user = await prisma.user.create({
+      const user = await prisma.user.create({
       data: {
         ...userData,
         password: hashedPassword,
-        status: userData.role === UserRole.MANAGER ? UserStatus.VERIFICATION_PENDING : UserStatus.ACTIVE,
+        status: UserStatus.ACTIVE,
         mustChangePassword: true,
-        emailVerified: userData.role !== UserRole.MANAGER,
-        createdBy: adminId,
+        emailVerified: true,
+        emailVerified: true,
+        creator: { connect: { id: adminId } },
+        department: userData.department ? {
+            connectOrCreate: {
+                where: { name: userData.department },
+                create: { name: userData.department }
+            }
+        } : undefined
       },
     });
 
-    if (user.role === UserRole.MANAGER) {
-      await this.sendVerificationCode(user.id);
-      await EmailService.sendManagerWelcomeEmail(user.email, user.firstName, tempPassword, await this.generateVerificationCode(user.id));
-    } else {
-      await EmailService.sendWelcomeEmail(user.email, user.firstName, tempPassword, user.role);
-    }
+    await EmailService.sendEmployeeWelcomeEmail(user.email, user.firstName, passwordToUse);
 
     await prisma.auditLog.create({
       data: {
@@ -321,7 +350,7 @@ export class AuthService {
       },
     });
 
-    return { ...user, temporaryPassword: tempPassword };
+    return { ...user, temporaryPassword: passwordToUse };
   }
 
   static async createEmployeeByManager(userData: any, managerId: string): Promise<any> {
@@ -334,8 +363,8 @@ export class AuthService {
       throw new AuthError('Cannot create employee in a different department');
     }
 
-    const tempPassword = crypto.randomBytes(8).toString('hex');
-    const hashedPassword = await BcryptUtil.hashPassword(tempPassword);
+    const passwordToUse = userData.password || crypto.randomBytes(8).toString('hex');
+    const hashedPassword = await BcryptUtil.hashPassword(passwordToUse);
 
     const user = await prisma.user.create({
       data: {
@@ -343,15 +372,19 @@ export class AuthService {
         password: hashedPassword,
         role: UserRole.EMPLOYEE,
         status: UserStatus.ACTIVE,
-        department: manager.department,
         managerId: manager.id,
         mustChangePassword: true,
         emailVerified: true,
-        createdBy: managerId,
+        mustChangePassword: true,
+        emailVerified: true,
+        creator: { connect: { id: managerId } },
+         department: {
+            connect: { name: manager.department } // Manager's department name must exist if manager exists
+         }
       },
     });
 
-    await EmailService.sendWelcomeEmail(user.email, user.firstName, tempPassword, UserRole.EMPLOYEE);
+    await EmailService.sendEmployeeWelcomeEmail(user.email, user.firstName, passwordToUse);
 
     await prisma.auditLog.create({
       data: {
@@ -363,21 +396,21 @@ export class AuthService {
       },
     });
 
-    return { ...user, temporaryPassword: tempPassword };
+    return { ...user, temporaryPassword: passwordToUse };
   }
 
   static async sendVerificationCode(userId: string): Promise<void> {
     const user = await UserRepository.findById(userId);
-    if (!user || user.role !== UserRole.MANAGER) {
-      throw new AuthError('User not found or not a manager');
+    if (!user) {
+      throw new AuthError('User not found');
     }
 
     const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
 
     await prisma.emailVerification.upsert({
       where: { userId },
-      update: { code: verificationCode, expiresAt: new Date(Date.now() + 15 * 60 * 1000), attempts: 0 },
-      create: { userId, code: verificationCode, expiresAt: new Date(Date.now() + 15 * 60 * 1000) },
+      update: { code: verificationCode, expiresAt: new Date(Date.now() + 10 * 60 * 1000), attempts: 0 },
+      create: { userId, code: verificationCode, expiresAt: new Date(Date.now() + 10 * 60 * 1000) },
     });
 
     await EmailService.sendVerificationCode(user.email, user.firstName, verificationCode);
@@ -454,7 +487,7 @@ export class AuthService {
 
     await UserRepository.updatePassword(userId, hashedPassword);
     await UserRepository.update(userId, { mustChangePassword: true, passwordChangedAt: new Date() });
-    await EmailService.sendWelcomeEmail(user!.email, user!.firstName, tempPassword, user!.role);
+    await EmailService.sendCredentialsEmail(user!.email, user!.firstName, tempPassword);
   }
 
   static async requestPasswordReset(email: string): Promise<void> {

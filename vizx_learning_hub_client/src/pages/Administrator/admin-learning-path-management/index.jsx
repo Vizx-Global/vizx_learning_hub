@@ -15,6 +15,8 @@ import { useModules } from './hooks/useModules';
 import learningPathService from './services/learningPathService';
 import moduleService from './services/moduleService';
 import CreateLearningPath from './components/CreateLearningPath';
+import PublishPromptModal from './components/PublishPromptModal';
+import toast from 'react-hot-toast';
 
 const LearningPathManagement = () => {
   const navigate = useNavigate();
@@ -27,6 +29,8 @@ const LearningPathManagement = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [pathForPublishing, setPathForPublishing] = useState(null);
+  const [promptedPaths, setPromptedPaths] = useState(new Set());
 
   // Use custom hooks
   const { 
@@ -59,7 +63,29 @@ const LearningPathManagement = () => {
     if (learningPaths?.length > 0 && !selectedPath) {
       setSelectedPath(learningPaths[0]);
     }
-  }, [learningPaths, selectedPath]);
+
+    // Check for unpublished paths (DRAFT) that haven't been prompted yet
+    if (learningPaths?.length > 0 && !loading) {
+      const unpublishedPath = learningPaths.find(p => p.status === 'DRAFT' && !promptedPaths.has(p.id));
+      if (unpublishedPath) {
+        setPathForPublishing(unpublishedPath);
+        setPromptedPaths(prev => new Set([...prev, unpublishedPath.id]));
+      }
+    }
+  }, [learningPaths, selectedPath, loading, promptedPaths]);
+
+  const handlePublishPath = async () => {
+    if (!pathForPublishing) return;
+    try {
+      await learningPathService.publishLearningPath(pathForPublishing.id);
+      toast.success(`"${pathForPublishing.title}" published successfully!`);
+      setPathForPublishing(null);
+      fetchLearningPaths(); // Refresh to update status
+    } catch (error) {
+      console.error('Failed to publish path:', error);
+      toast.error('Failed to publish learning path');
+    }
+  };
 
   const handlePathSelect = (path) => {
     setSelectedPath(path);
@@ -199,10 +225,10 @@ const LearningPathManagement = () => {
   return (
     <div className="min-h-screen bg-background">
       {/* Navigation Sidebar */}
-      <NavigationSidebar userRole="admin" />
+      <NavigationSidebar isCollapsed={sidebarCollapsed} />
       
       {/* Main Content */}
-      <div className={`transition-all duration-300 ${sidebarCollapsed ? 'ml-16' : 'ml-72'}`}>
+      <div className={`transition-all duration-300 ${sidebarCollapsed ? 'md:ml-16' : 'md:ml-72'}`}>
         <div className="flex h-screen">
           {/* Path Category Sidebar */}
           <PathCategorySidebar
@@ -288,11 +314,12 @@ const LearningPathManagement = () => {
             {/* Bulk Operations Toolbar */}
             <div className="p-6 pb-0">
               <BulkOperationsToolbar
-                selectedPaths={selectedPaths}
+                selectedItems={selectedPaths}
                 onBulkAction={handleBulkAction}
                 onSelectAll={handleSelectAll}
                 onClearSelection={handleClearSelection}
-                totalPaths={learningPaths?.length}
+                totalItems={learningPaths?.length}
+                itemLabel="learning paths"
               />
             </div>
 
@@ -360,10 +387,23 @@ const LearningPathManagement = () => {
       <CreateLearningPath
         isOpen={showCreateModal}
         onClose={() => setShowCreateModal(false)}
-        onSuccess={() => {
+        onSuccess={(newPath) => {
           fetchLearningPaths();
           setShowCreateModal(false);
+          // Auto-prompt for publication if it's a draft
+          if (newPath.status === 'DRAFT') {
+            setPathForPublishing(newPath);
+            setPromptedPaths(prev => new Set([...prev, newPath.id]));
+          }
         }}
+      />
+
+      {/* Publish Prompt Modal */}
+      <PublishPromptModal
+        isOpen={!!pathForPublishing}
+        onClose={() => setPathForPublishing(null)}
+        onPublish={handlePublishPath}
+        pathName={pathForPublishing?.title}
       />
     </div>
   );

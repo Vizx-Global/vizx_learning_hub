@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import Icon from '../../../../components/AppIcon';
 import Button from '../../../../components/ui/Button';
 import axiosClient from '../../../../utils/axiosClient';
+import departmentService from '../../../../api/departmentService';
 
 const CreateUserModal = ({ isOpen, onClose, onSuccess }) => {
   const [formData, setFormData] = useState({
@@ -117,9 +118,21 @@ const CreateUserModal = ({ isOpen, onClose, onSuccess }) => {
     setLoadingData(true);
 
     try {
-      // Since the departments and job titles endpoints don't exist,
-      // we'll use the default lists but try to fetch existing users
-      // to get actual departments and job titles from the system
+      // Fetch departments from API
+      try {
+        const response = await departmentService.getAllDepartments({ limit: 100 });
+        if (response.data?.success) {
+          const apiDepartments = response.data.data.departments || [];
+          const deptNames = apiDepartments.map(d => d.name).sort();
+          setDepartments(deptNames);
+        }
+      } catch (err) {
+        console.error('Failed to fetch departments from service:', err);
+        // Fallback to defaults or user extraction if service fails
+        setDepartments(defaultDepartments);
+      }
+
+      // Fetch existing users to extract unique job titles
       try {
         const usersResponse = await axiosClient.get('/users/all');
         console.log('Users response for data extraction:', usersResponse.data);
@@ -129,43 +142,28 @@ const CreateUserModal = ({ isOpen, onClose, onSuccess }) => {
             ? usersResponse.data.data
             : usersResponse.data.data.users || [];
 
-          // Extract unique departments from existing users
-          const userDepartments = [...new Set(users
-            .map(user => user.department)
-            .filter(dept => dept && dept.trim())
-          )].sort();
-
           // Extract unique job titles from existing users
           const userJobTitles = [...new Set(users
             .map(user => user.jobTitle)
             .filter(title => title && title.trim())
           )].sort();
 
-          // Combine user data with defaults, prioritizing user data
-          const combinedDepartments = [...userDepartments, ...defaultDepartments]
-            .filter((dept, index, array) => array.indexOf(dept) === index)
-            .sort();
-
+          // Combine with defaults
           const combinedJobTitles = [...userJobTitles, ...defaultJobTitles]
             .filter((title, index, array) => array.indexOf(title) === index)
             .sort();
 
-          setDepartments(combinedDepartments);
           setJobTitles(combinedJobTitles);
         } else {
-          // Fallback to defaults if no user data
-          setDepartments(defaultDepartments);
           setJobTitles(defaultJobTitles);
         }
       } catch (userError) {
-        console.log('Could not fetch users for data extraction, using defaults:', userError);
-        setDepartments(defaultDepartments);
+        console.log('Could not fetch users for job titles, using defaults:', userError);
         setJobTitles(defaultJobTitles);
       }
     } catch (error) {
       console.error('Error initializing data:', error);
-      // Fallback to defaults
-      setDepartments(defaultDepartments);
+      if (departments.length === 0) setDepartments(defaultDepartments);
       setJobTitles(defaultJobTitles);
     } finally {
       setLoadingData(false);

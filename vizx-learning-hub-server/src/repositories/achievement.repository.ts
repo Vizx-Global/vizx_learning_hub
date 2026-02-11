@@ -40,4 +40,23 @@ export class AchievementRepository {
       orderBy: { createdAt: 'desc' }
     });
   }
+
+  static async findRecent(limit: number = 10) {
+    return await prisma.userAchievement.findMany({
+      where: { isUnlocked: true },
+      take: limit,
+      orderBy: { earnedAt: 'desc' },
+      include: {
+        user: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            avatar: true
+          }
+        },
+        achievement: true
+      }
+    });
+  }
 }

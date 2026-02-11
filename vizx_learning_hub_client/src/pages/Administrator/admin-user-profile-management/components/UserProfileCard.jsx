@@ -3,6 +3,8 @@ import Icon from '../../../../components/AppIcon';
 import Image from '../../../../components/AppImage';
 
 const UserProfileCard = ({ user, onEdit, isEditing, onSave, onCancel }) => {
+  const [imgError, setImgError] = React.useState(false);
+
   const getStatusColor = (status) => {
     switch (status) {
       case 'Active': return 'text-success bg-success/10';
@@ -59,12 +61,19 @@ const UserProfileCard = ({ user, onEdit, isEditing, onSave, onCancel }) => {
       {/* User Avatar and Basic Info */}
       <div className="flex items-start gap-6">
         <div className="relative">
-          <div className="w-24 h-24 rounded-full overflow-hidden bg-muted">
-            <Image
-              src={user?.avatar}
-              alt={user?.name}
-              className="w-full h-full object-cover"
-            />
+          <div className="w-24 h-24 rounded-full overflow-hidden bg-primary/10 flex items-center justify-center">
+            {user?.avatar && !imgError ? (
+              <Image
+                src={user?.avatar}
+                alt={user?.name}
+                className="w-full h-full object-cover"
+                onError={() => setImgError(true)}
+              />
+            ) : (
+              <span className="text-2xl font-bold text-primary">
+                {user?.name ? user.name.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase() : '??'}
+              </span>
+            )}
           </div>
           <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-success rounded-full border-2 border-card flex items-center justify-center">
             <Icon name="Check" size={12} color="white" />
@@ -97,7 +106,7 @@ const UserProfileCard = ({ user, onEdit, isEditing, onSave, onCancel }) => {
           <div className="grid grid-cols-3 gap-4">
             <div>
               <label className="text-sm font-medium text-muted-foreground">Department</label>
-              <p className="text-foreground mt-1">{user?.department}</p>
+              <p className="text-foreground mt-1">{user?.department?.name || (typeof user?.department === 'string' ? user.department : 'Not assigned')}</p>
             </div>
             <div>
               <label className="text-sm font-medium text-muted-foreground">Role</label>
