@@ -5,6 +5,7 @@ import Button from "../../../components/ui/Button";
 import { useNavigate } from "react-router-dom";
 import learningPathService from "../../../api/learningPathService";
 import enrollmentService from "../../../api/enrollmentService";
+import categoryService from "../../../api/categoryService";
 import { useAuth } from "../../../contexts/AuthContext";
 
 const FeaturedLearningPaths = () => {
@@ -42,34 +43,66 @@ const FeaturedLearningPaths = () => {
       setLoading(true);
       setError(null);
       
-      // Fetch Featured Paths
-      // Using queryParams limit: 20 to get a reasonable amount
-      const response = await learningPathService.getFeaturedLearningPaths({ limit: 20 });
-      let paths = [];
-      
-      // Robustly handle response structure variations
-      if (response.data?.success || response.data) {
-         paths = response.data?.data?.learningPaths || response.data?.data || response.data || [];
-         if (!Array.isArray(paths)) paths = [];
+      // Fetch Categories and Featured Paths in parallel
+      const [categoriesResponse, pathsResponse] = await Promise.all([
+        categoryService.getAllCategories().catch(err => {
+          console.error("Error fetching categories:", err);
+          return { data: [] };
+        }),
+        learningPathService.getFeaturedLearningPaths({ limit: 20 })
+      ]);
+
+      // Robustly handle categories response structure
+      let allRepoCategories = [];
+      const catData = categoriesResponse;
+      if (catData && Array.isArray(catData.data)) {
+        allRepoCategories = catData.data;
+      } else if (catData && catData.data && Array.isArray(catData.data.categories)) {
+        allRepoCategories = catData.data.categories;
+      } else if (Array.isArray(catData)) {
+        allRepoCategories = catData;
       }
+
+      // Robustly handle paths response structure
+      let fetchedPaths = [];
+      const pData = pathsResponse.data?.success || pathsResponse.data ? pathsResponse.data : pathsResponse;
+      fetchedPaths = pData?.data?.learningPaths || pData?.data || pData || [];
+      if (!Array.isArray(fetchedPaths)) fetchedPaths = [];
+
+      // Helper to resolve category name
+      const getCategoryName = (path) => {
+        if (path.categoryRef?.name) return path.categoryRef.name;
+        if (path.category && typeof path.category === 'string') return path.category;
+        if (path.categoryId && allRepoCategories.length > 0) {
+          const found = allRepoCategories.find(c => String(c.id) === String(path.categoryId));
+          if (found) return found.name;
+        }
+        return "Uncategorized";
+      };
+
+      // Map paths with resolved category names
+      const paths = fetchedPaths.map(path => ({
+          ...path,
+          categoryDisplayName: getCategoryName(path)
+      }));
 
       setLearningPaths(paths);
 
       // Extract Categories dynamically from the fetched paths
-      // This ensures tabs only show categories that actually have content to display
       const allCategory = { id: "all", name: "All Categories", count: paths.length };
       const categoryMap = new Map();
 
       paths.forEach(path => {
-         if (path.category) {
-            const catLower = path.category.toLowerCase();
+         const categoryName = path.categoryDisplayName;
+         if (categoryName && categoryName !== "Uncategorized") {
+            const catLower = categoryName.toLowerCase();
             const existing = categoryMap.get(catLower);
             if (existing) {
                existing.count++;
             } else {
                categoryMap.set(catLower, {
                   id: catLower,
-                  name: path.category, // Keep original casing for display label
+                  name: categoryName,
                   count: 1
                });
             }
@@ -124,7 +157,7 @@ const FeaturedLearningPaths = () => {
 
   const handleBrowseAll = () => navigate("/browse");
 
-  const filteredPaths = (selectedCategory === "all" ? learningPaths : learningPaths.filter(path => path.category?.toLowerCase() === selectedCategory.toLowerCase())).slice(0, 8);
+  const filteredPaths = (selectedCategory === "all" ? learningPaths : learningPaths.filter(path => path.categoryDisplayName?.toLowerCase() === selectedCategory.toLowerCase())).slice(0, 8);
 
   const formatDuration = (hours) => {
     if (!hours) return "Flexible";
@@ -207,7 +240,7 @@ const FeaturedLearningPaths = () => {
                     </div>
                     <div className="p-5 flex-1 flex flex-col bg-card">
                       <div className="mb-3">
-                        <div className="flex items-center justify-between text-sm"><span className="text-primary font-medium text-xs uppercase tracking-wider">{path.category || "Uncategorized"}</span><span className="text-muted-foreground text-xs">{path.provider || "Internal"}</span></div>
+                        <div className="flex items-center justify-between text-sm"><span className="text-primary font-medium text-xs uppercase tracking-wider">{path.categoryDisplayName || "Uncategorized"}</span><span className="text-muted-foreground text-xs">{path.provider || "Internal"}</span></div>
                       </div>
                       <p className="text-sm text-muted-foreground mb-4 flex-1 line-clamp-3 leading-relaxed">{path.description || path.shortDescription || "No description available"}</p>
                       <div className="space-y-3 mb-4">
