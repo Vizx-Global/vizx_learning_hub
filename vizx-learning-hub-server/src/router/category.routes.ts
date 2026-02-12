@@ -12,8 +12,8 @@ import {
 const router = Router();
 
 // Category Routes
-router.get('/', authenticate, CategoryController.getAllCategories);
-router.get('/:id', authenticate, CategoryController.getCategoryById);
+router.get('/', CategoryController.getAllCategories);
+router.get('/:id', CategoryController.getCategoryById);
 
 // Admin-only Routes
 router.post(
@@ -38,7 +38,7 @@ router.delete(
 );
 
 // SubCategory Routes
-router.get('/:categoryId/subcategories', authenticate, CategoryController.getSubCategoriesByCategory);
+router.get('/:categoryId/subcategories', CategoryController.getSubCategoriesByCategory);
 
 router.post(
   '/:categoryId/subcategories',
