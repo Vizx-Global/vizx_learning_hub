@@ -18,8 +18,33 @@ axiosClient.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
+const normalizeData = (data) => {
+  if (!data || typeof data !== 'object') return data;
+
+  if (Array.isArray(data)) {
+    return data.map(normalizeData);
+  }
+
+  const normalized = {};
+  for (const [key, value] of Object.entries(data)) {
+    if (typeof value === 'string' && (value.includes('localhost:3000') || value.includes('127.0.0.1:3000'))) {
+      normalized[key] = value.replace(/http:\/\/(localhost|127\.0\.0\.1):3000/, API_BASE_URL);
+    } else if (typeof value === 'object' && value !== null) {
+      normalized[key] = normalizeData(value);
+    } else {
+      normalized[key] = value;
+    }
+  }
+  return normalized;
+};
+
 axiosClient.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    if (response.data) {
+      response.data = normalizeData(response.data);
+    }
+    return response;
+  },
   async (error) => {
     const originalRequest = error.config;
     if (error.response?.status === 401 && !originalRequest._retry) {

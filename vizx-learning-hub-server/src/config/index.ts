@@ -15,15 +15,25 @@ if (missingRequiredEnvVars.length > 0) {
 }
 
 const getBaseUploadPath = () => {
+  if (process.env.UPLOAD_PATH) {
+    return path.isAbsolute(process.env.UPLOAD_PATH) 
+      ? process.env.UPLOAD_PATH 
+      : path.join(process.cwd(), process.env.UPLOAD_PATH);
+  }
+  
   if (process.env.NODE_ENV === 'production') {
-    return process.env.UPLOAD_PATH || '/var/www/uploads';
+    return '/var/www/uploads';
   }
   return path.join(process.cwd(), 'uploads');
 };
 
 const getBaseUploadUrl = () => {
+  if (process.env.UPLOAD_URL) {
+    return process.env.UPLOAD_URL;
+  }
+  
   if (process.env.NODE_ENV === 'production') {
-    return process.env.UPLOAD_URL || 'https://your-domain.com/uploads';
+    return 'https://academy-api.vizxglobal.com/uploads';
   }
   return `http://localhost:${process.env.PORT || 3000}/uploads`;
 };
