@@ -18,8 +18,12 @@ import CreateLearningPath from './components/CreateLearningPath';
 import PublishPromptModal from './components/PublishPromptModal';
 import toast from 'react-hot-toast';
 
+import AdminHeader from '../admin-learning-dashboard/components/AdminHeader';
+import { useAuth } from '../../../contexts/AuthContext';
+
 const LearningPathManagement = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState('ai-fundamentals');
   const [selectedPath, setSelectedPath] = useState(null);
@@ -222,14 +226,30 @@ const LearningPathManagement = () => {
     }
   };
 
+  const userInfo = {
+    name: user ? `${user.firstName} ${user.lastName}` : 'Administrator',
+    role: user?.role || 'ADMIN'
+  };
+
   return (
     <div className="min-h-screen bg-background">
       {/* Navigation Sidebar */}
       <NavigationSidebar isCollapsed={sidebarCollapsed} />
       
       {/* Main Content */}
-      <div className={`transition-all duration-300 ${sidebarCollapsed ? 'md:ml-16' : 'md:ml-72'}`}>
-        <div className="flex h-screen">
+      <div className={`transition-all duration-300 ${sidebarCollapsed ? 'md:ml-16' : 'md:ml-72'} flex flex-col h-screen`}>
+        <AdminHeader 
+          sidebarCollapsed={sidebarCollapsed}
+          setSidebarCollapsed={setSidebarCollapsed}
+          isLoading={loading}
+          lastSyncTime={null} // Learning path management might not have a global sync clock like dashboard
+          userInfo={userInfo}
+          user={user}
+          title="Infrastructure Lab"
+          icon="Layers"
+        />
+
+        <div className="flex flex-1 overflow-hidden">
           {/* Path Category Sidebar */}
           <PathCategorySidebar
             isCollapsed={sidebarCollapsed}
@@ -244,7 +264,7 @@ const LearningPathManagement = () => {
 
           {/* Main Workspace */}
           <div className="flex-1 flex flex-col overflow-hidden">
-            {/* Header */}
+            {/* Page Specific Actions */}
             <div className="bg-card border-b border-border p-6">
               <div className="flex items-center justify-between mb-4">
                 <div>

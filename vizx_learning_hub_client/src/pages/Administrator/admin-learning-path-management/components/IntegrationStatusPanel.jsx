@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import Icon from '../../../../components/AppIcon';
 import Button from '../../../../components/ui/Button';
 import LiveUpdateIndicator from '../../../../components/ui/LiveUpdateIndicator';
@@ -79,8 +80,18 @@ const IntegrationStatusPanel = ({ onSync, onResolveConflict }) => {
       message: 'Successfully synchronized 45 learning paths with Microsoft Learn',
       timestamp: new Date(Date.now() - 5400000), // 1.5 hours ago
       action: 'View Report'
+    },
+    {
+      id: 'notif-4',
+      type: 'update',
+      title: 'Course update available',
+      message: 'Advanced AI Ethics has been updated by the content team',
+      timestamp: new Date(Date.now() - 7200000), // 2 hours ago
+      action: 'Review Changes'
     }
   ];
+
+  const navigate = useNavigate();
 
   useEffect(() => {
     // Simulate real-time updates
@@ -330,14 +341,16 @@ const IntegrationStatusPanel = ({ onSync, onResolveConflict }) => {
           <Button
             variant="ghost"
             size="sm"
-            iconName="MoreHorizontal"
+            iconName="ArrowRight"
+            iconPosition="right"
+            onClick={() => navigate('/notification-management-center')}
           >
             View All
           </Button>
         </div>
 
         <div className="space-y-3">
-          {notifications?.map((notification) => (
+          {notifications?.slice(0, 3).map((notification) => (
             <div key={notification?.id} className="flex items-start gap-3 p-3 hover:bg-muted/50 rounded-lg transition-colors">
               <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${getNotificationColor(notification?.type)} bg-current/10`}>
                 <Icon name={getNotificationIcon(notification?.type)} size={16} className={getNotificationColor(notification?.type)} />

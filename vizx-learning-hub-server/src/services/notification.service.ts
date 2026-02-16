@@ -156,6 +156,19 @@ export class NotificationService {
     });
   }
 
+  static async notifyPeerReminder(userId: string, title: string, message: string, senderId: string) {
+    return await NotificationRepository.create({
+      userId,
+      type: 'SOCIAL',
+      title,
+      message,
+      actionUrl: '/employee-dashboard',
+      actionLabel: 'Go to Learning',
+      metadata: { senderId },
+      priority: 'NORMAL'
+    });
+  }
+
   static async getAdminStats() {
     return await NotificationRepository.getAdminStats();
   }

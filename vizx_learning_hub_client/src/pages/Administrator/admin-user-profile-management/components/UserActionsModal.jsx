@@ -3,6 +3,7 @@ import Icon from '../../../../components/AppIcon';
 import Input from '../../../../components/ui/Input';
 import Button from '../../../../components/ui/Button';
 import axiosClient from '../../../../utils/axiosClient';
+import departmentService from '../../../../api/departmentService';
 import { useAuth } from '../../../../contexts/AuthContext';
 import Swal from 'sweetalert2';
 
@@ -27,6 +28,13 @@ const UserActionsModal = ({
     status: 'ACTIVE'
   });
   const [errors, setErrors] = useState({});
+  const [departments, setDepartments] = useState([]);
+  const [jobTitles, setJobTitles] = useState([]);
+  const [loadingData, setLoadingData] = useState(false);
+
+  // Default data from CreateUserModal as fallbacks
+  const defaultDepartments = ['Engineering', 'Product', 'Marketing', 'Sales', 'HR', 'Finance', 'Operations', 'IT', 'Customer Success', 'Design', 'Research', 'Legal'];
+  const defaultJobTitles = ['Software Engineer', 'Senior Software Engineer', 'Frontend Developer', 'Backend Developer', 'Full Stack Developer', 'DevOps Engineer', 'QA Engineer', 'Engineering Manager', 'Product Manager', 'Product Designer', 'UX Researcher', 'Product Owner', 'Marketing Manager', 'Content Strategist', 'SEO Specialist', 'Digital Marketing Specialist', 'Sales Representative', 'Account Executive', 'Sales Manager', 'Business Development Manager', 'HR Manager', 'Recruiter', 'HR Business Partner', 'Talent Acquisition Specialist', 'Financial Analyst', 'Accountant', 'Finance Manager', 'Controller', 'Operations Manager', 'Project Manager', 'Operations Specialist', 'IT Support', 'System Administrator', 'Network Engineer', 'IT Manager', 'Customer Success Manager', 'Support Specialist', 'Account Manager', 'UI/UX Designer', 'Graphic Designer', 'Design Manager'];
 
   // Reset form when modal opens/closes or user changes
   useEffect(() => {
@@ -42,8 +50,58 @@ const UserActionsModal = ({
         status: user.status || 'ACTIVE'
       });
       setErrors({});
+      initializeData();
     }
   }, [isOpen, user]);
+
+  const initializeData = async () => {
+    setLoadingData(true);
+    try {
+      // Fetch departments
+      try {
+        const response = await departmentService.getAllDepartments({ limit: 100 });
+        if (response.data?.success) {
+          const apiDepartments = response.data.data.departments || [];
+          setDepartments(apiDepartments.map(d => d.name).sort());
+        } else {
+          setDepartments(defaultDepartments);
+        }
+      } catch (err) {
+        setDepartments(defaultDepartments);
+      }
+
+      // Fetch job titles from existing users
+      try {
+        const usersResponse = await axiosClient.get('/users/all');
+        if (usersResponse.data?.data) {
+          const users = Array.isArray(usersResponse.data.data) ? usersResponse.data.data : usersResponse.data.data.users || [];
+          const userJobTitles = [...new Set(users.map(u => u.jobTitle).filter(t => t && t.trim()))];
+          setJobTitles([...new Set([...userJobTitles, ...defaultJobTitles])].sort());
+        } else {
+          setJobTitles(defaultJobTitles);
+        }
+      } catch (err) {
+        setJobTitles(defaultJobTitles);
+      }
+    } catch (error) {
+      setDepartments(defaultDepartments);
+      setJobTitles(defaultJobTitles);
+    } finally {
+      setLoadingData(false);
+    }
+  };
+
+  const isCommonJobTitle = (title) => {
+    const commonTitles = ['Manager', 'Specialist', 'Engineer', 'Analyst', 'Coordinator', 'Director', 'Lead'];
+    return commonTitles.some(common => title.toLowerCase().includes(common.toLowerCase()));
+  };
+
+  const filteredJobTitles = formData.department
+    ? jobTitles.filter(title =>
+        title.toLowerCase().includes(formData.department.toLowerCase()) ||
+        isCommonJobTitle(title)
+      )
+    : jobTitles;
 
   const handleInputChange = (field, value) => {
     setFormData(prev => ({
@@ -419,13 +477,22 @@ const UserActionsModal = ({
                     <label className="block text-sm font-medium text-foreground mb-2">
                       Department *
                     </label>
-                    <Input
+                    <select
                       value={formData.department}
-                      onChange={(e) => handleInputChange('department', e.target.value)}
-                      placeholder="Enter department"
-                      className={errors.department ? 'border-destructive' : ''}
-                      disabled={loading}
-                    />
+                      onChange={(e) => {
+                        handleInputChange('department', e.target.value);
+                        setFormData(prev => ({ ...prev, jobTitle: '' }));
+                      }}
+                      className={`w-full px-3 py-2 bg-background border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring text-sm ${
+                        errors.department ? 'border-destructive' : 'border-border'
+                      }`}
+                      disabled={loading || loadingData}
+                    >
+                      <option value="">Select department</option>
+                      {departments.map((dept) => (
+                        <option key={dept} value={dept}>{dept}</option>
+                      ))}
+                    </select>
                     {errors.department && (
                       <p className="text-destructive text-xs mt-1">{errors.department}</p>
                     )}
@@ -434,13 +501,19 @@ const UserActionsModal = ({
                     <label className="block text-sm font-medium text-foreground mb-2">
                       Job Title *
                     </label>
-                    <Input
+                    <select
                       value={formData.jobTitle}
                       onChange={(e) => handleInputChange('jobTitle', e.target.value)}
-                      placeholder="Enter job title"
-                      className={errors.jobTitle ? 'border-destructive' : ''}
-                      disabled={loading}
-                    />
+                      className={`w-full px-3 py-2 bg-background border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring text-sm ${
+                        errors.jobTitle ? 'border-destructive' : 'border-border'
+                      }`}
+                      disabled={loading || loadingData || !formData.department}
+                    >
+                      <option value="">Select job title</option>
+                      {filteredJobTitles.map((title) => (
+                        <option key={title} value={title}>{title}</option>
+                      ))}
+                    </select>
                     {errors.jobTitle && (
                       <p className="text-destructive text-xs mt-1">{errors.jobTitle}</p>
                     )}

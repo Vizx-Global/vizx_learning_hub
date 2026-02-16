@@ -10,20 +10,24 @@ import { NotificationProvider } from './contexts/NotificationContext';
 
 import { SocketProvider } from './contexts/SocketContext';
 
+import { HelmetProvider } from 'react-helmet-async';
+
 const queryClient = new QueryClient();
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
-    <QueryClientProvider client={queryClient}>
-      <AuthProvider>  
-        <SocketProvider>
-          <NotificationProvider>
-            <FilterProvider>
-              <App />
-            </FilterProvider>
-          </NotificationProvider>
-        </SocketProvider>
-      </AuthProvider>
-    </QueryClientProvider>
+    <HelmetProvider>
+      <QueryClientProvider client={queryClient}>
+        <AuthProvider>  
+          <SocketProvider>
+            <NotificationProvider>
+              <FilterProvider>
+                <App />
+              </FilterProvider>
+            </NotificationProvider>
+          </SocketProvider>
+        </AuthProvider>
+      </QueryClientProvider>
+    </HelmetProvider>
   </StrictMode>,
 )

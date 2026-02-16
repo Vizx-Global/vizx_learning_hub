@@ -16,6 +16,9 @@ const departmentService = {
   // Get department performance statistics
   getDepartmentPerformance: (id) => axiosClient.get(`/departments/${id}/performance`),
 
+  // Compare department completion rates and learning progress
+  getDepartmentComparison: (limit = 10) => axiosClient.get('/departments/rankings', { params: { limit } }),
+
   // Update a department
   updateDepartment: (id, data) => axiosClient.put(`/departments/${id}`, data),
 

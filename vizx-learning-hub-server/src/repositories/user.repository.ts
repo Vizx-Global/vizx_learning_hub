@@ -380,7 +380,14 @@ export class UserRepository {
 
   // STATISTICS
   static async getUserStats() {
-    const [totalUsers, activeUsers, usersByRole, usersByDepartment] = await Promise.all([
+    const [
+      totalUsers, 
+      activeUsers, 
+      usersByRole, 
+      usersByDepartment,
+      totalEnrollments,
+      activeLearners
+    ] = await Promise.all([
       prisma.user.count(),
       prisma.user.count({ where: { status: UserStatus.ACTIVE } }),
       prisma.user.groupBy({
@@ -396,6 +403,15 @@ export class UserRepository {
           },
         },
       }),
+      prisma.enrollment.count(),
+      prisma.user.count({
+        where: {
+          OR: [
+            { currentStreak: { gt: 0 } },
+            { enrollments: { some: {} } }
+          ]
+        }
+      })
     ]);
 
     return {
@@ -403,6 +419,8 @@ export class UserRepository {
       activeUsers,
       usersByRole,
       usersByDepartment,
+      totalEnrollments,
+      activeLearners
     };
   }
 

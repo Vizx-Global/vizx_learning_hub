@@ -14,22 +14,22 @@ const NavigationSidebar = ({ isCollapsed = false }) => {
   
   const navigationItems = [
     { section: 'My Learning', items: [{ label: 'Dashboard', path: '/admin-learning-dashboard', icon: 'LayoutDashboard', roles: ['ADMIN', 'MANAGER'] }] },
-    { section: 'Performance Analytics', items: [{ label: 'Cohort Analytics', path: '/cohort-performance-analytics', icon: 'Activity', roles: ['ADMIN', 'MANAGER'] }] },
-    { section: 'Games & Challenges', items: [{ label: 'Learning Games', path: '/interactive-learning-games-hub', icon: 'Gamepad2', roles: ['ADMIN', 'MANAGER'] }] },
-    { section: 'Competition', items: [{ label: 'Leaderboards', path: '/gamification-leaderboards', icon: 'Trophy', roles: ['ADMIN', 'MANAGER'] }] },
     { section: 'Content Management', items: [
-      { label: 'Learning Paths', path: '/learning-path-management', icon: 'BookOpen', roles: ['ADMIN', 'MANAGER'] },
-      { label: 'Content Categories', path: '/content-categories-management', icon: 'Tags', roles: ['ADMIN', 'MANAGER'] }
+      { label: 'Learning Paths', path: '/learning-path-management', icon: 'BookOpen', roles: ['ADMIN'] },
+      { label: 'Content Categories', path: '/content-categories-management', icon: 'Tags', roles: ['ADMIN'] }
     ] },
-    { section: 'System Integration', items: [{ label: 'Content Sync', path: '/learning-content-synchronization', icon: 'RefreshCw', roles: ['ADMIN'] }] },
-    { section: 'User Administration', items: [
+     { section: 'User Administration', items: [
       { label: 'User Profiles', path: '/user-profile-management', icon: 'Users', roles: ['ADMIN', 'MANAGER'] },
       { label: 'Departments', path: '/department-management', icon: 'Building', roles: ['ADMIN', 'MANAGER'] }
     ] },
-    { section: 'Communication', items: [
+     { section: 'Competition', items: [{ label: 'Leaderboards', path: '/gamification-leaderboards', icon: 'Trophy', roles: ['ADMIN', 'MANAGER'] }] },
+     { section: 'Communication', items: [
       { label: 'Live Chat', path: '/admin-chat', icon: 'MessageSquare', roles: ['ADMIN', 'MANAGER'] }
     ] },
-    { section: 'Notification Manager', items: [{ label: 'Notifications', path: '/notification-management-center', icon: 'Bell', roles: ['ADMIN'] }] },
+        { section: 'Notification Manager', items: [{ label: 'Notifications', path: '/notification-management-center', icon: 'Bell', roles: ['ADMIN'] }] },
+    { section: 'Performance Analytics', items: [{ label: 'Cohort Analytics', path: '/cohort-performance-analytics', icon: 'Activity', roles: ['ADMIN', 'MANAGER'] }] },
+    { section: 'Games & Challenges', items: [{ label: 'Learning Games', path: '/interactive-learning-games-hub', icon: 'Gamepad2', roles: ['ADMIN', 'MANAGER'] }] },
+    // { section: 'System Integration', items: [{ label: 'Content Sync', path: '/learning-content-synchronization', icon: 'RefreshCw', roles: ['ADMIN'] }] },
     { section: 'System Configuration', items: [{ label: 'System Configuration', path: '/administrative-system-configuration', icon: 'Settings', roles: ['ADMIN'] }] }
   ];
 
@@ -78,7 +78,7 @@ const NavigationSidebar = ({ isCollapsed = false }) => {
         <Icon name="Menu" size={24} />
       </button>
 
-      <aside className={`fixed left-0 top-0 h-full bg-card border-r border-border z-50 transition-transform duration-300 ease-in-out ${isCollapsed ? 'w-16' : 'w-72'} ${isMobileOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0`}>
+      <aside className={`fixed left-0 top-0 h-full bg-[#000000] border-r border-border z-50 transition-transform duration-300 ease-in-out ${isCollapsed ? 'w-16' : 'w-72'} ${isMobileOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0`}>
         <div className="flex flex-col h-full">
           <div className="p-4 border-b border-border">
             <a 

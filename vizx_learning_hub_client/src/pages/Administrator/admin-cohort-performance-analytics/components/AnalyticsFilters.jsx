@@ -17,12 +17,44 @@ const AnalyticsFilters = ({ cohorts = [], selectedCohort, onCohortChange, timeRa
   ];
 
   return (
-    <div className="bg-card border border-border rounded-lg p-4">
-      <div className="flex items-center gap-3 mb-4"><Icon name="Filter" size={20} className="text-muted-foreground" /><h3 className="font-semibold text-foreground">Analytics Filters</h3></div>
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Select label="Cohort" options={cohorts.map(c => ({ value: c.id, label: c.name }))} value={selectedCohort} onChange={onCohortChange} className="w-full" />
-        <Select label="Time Range" options={timeRangeOptions} value={timeRange} onChange={onTimeRangeChange} className="w-full" />
-        <Select label="Primary Metric" options={metricOptions} value={selectedMetric} onChange={onMetricChange} className="w-full" />
+    <div className="bg-[#000000] border border-border/50 rounded-[2rem] p-6 shadow-sm">
+      <div className="flex items-center gap-4 mb-6 px-2">
+        <div className="p-2.5 rounded-xl bg-muted/30 text-muted-foreground border border-border/50">
+          <Icon name="Filter" size={18} className="stroke-[2.5]" />
+        </div>
+        <div>
+          <h3 className="text-sm font-black uppercase tracking-widest text-foreground">Analytics Filters</h3>
+          <p className="text-[10px] text-muted-foreground font-black uppercase tracking-widest mt-0.5">Refine your intelligence vector</p>
+        </div>
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="space-y-2">
+          <label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest ml-1">Learning Cohort</label>
+          <Select 
+            options={cohorts.map(c => ({ value: c.id, label: c.name }))} 
+            value={selectedCohort} 
+            onChange={onCohortChange} 
+            className="w-full bg-card/30 border-border/40 rounded-xl font-bold uppercase tracking-widest text-[10px]" 
+          />
+        </div>
+        <div className="space-y-2">
+          <label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest ml-1">Time Horizon</label>
+          <Select 
+            options={timeRangeOptions} 
+            value={timeRange} 
+            onChange={onTimeRangeChange} 
+            className="w-full bg-card/30 border-border/40 rounded-xl font-bold uppercase tracking-widest text-[10px]" 
+          />
+        </div>
+        <div className="space-y-2">
+          <label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest ml-1">Primary Metric</label>
+          <Select 
+            options={metricOptions} 
+            value={selectedMetric} 
+            onChange={onMetricChange} 
+            className="w-full bg-card/30 border-border/40 rounded-xl font-bold uppercase tracking-widest text-[10px]" 
+          />
+        </div>
       </div>
     </div>
   );

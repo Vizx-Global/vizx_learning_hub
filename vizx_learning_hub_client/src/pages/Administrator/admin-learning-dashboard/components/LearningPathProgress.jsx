@@ -1,259 +1,127 @@
 import React, { useState, useEffect } from 'react';
 import Icon from '../../../../components/AppIcon';
+import { learningPathService } from '../../../../api';
 
-const LearningPathProgress = ({ userRole = 'employee' }) => {
-  const [currentPath, setCurrentPath] = useState(null);
-  const [achievements, setAchievements] = useState([]);
-  const [milestones, setMilestones] = useState([]);
-
-  const learningPaths = [
-    {
-      id: 1,
-      title: "AI Fundamentals for Business",
-      description: "Essential AI concepts for business professionals",
-      totalModules: 8,
-      completedModules: 5,
-      estimatedTime: "12 hours",
-      difficulty: "Beginner",
-      category: "Foundation",
-      modules: [
-        { id: 1, title: "Introduction to AI", completed: true, timeSpent: 45 },
-        { id: 2, title: "Machine Learning Basics", completed: true, timeSpent: 60 },
-        { id: 3, title: "AI in Business Context", completed: true, timeSpent: 55 },
-        { id: 4, title: "Data and AI Ethics", completed: true, timeSpent: 40 },
-        { id: 5, title: "AI Tools Overview", completed: true, timeSpent: 50 },
-        { id: 6, title: "Implementing AI Solutions", completed: false, timeSpent: 0 },
-        { id: 7, title: "AI Project Management", completed: false, timeSpent: 0 },
-        { id: 8, title: "Future of AI in Business", completed: false, timeSpent: 0 }
-      ]
-    }
-  ];
-
-  const userAchievements = [
-    {
-      id: 1,
-      title: "First Steps",
-      description: "Completed your first AI module",
-      icon: "Award",
-      earned: true,
-      earnedDate: "2025-09-28"
-    },
-    {
-      id: 2,
-      title: "Streak Master",
-      description: "7-day learning streak",
-      icon: "Flame",
-      earned: true,
-      earnedDate: "2025-10-01"
-    },
-    {
-      id: 3,
-      title: "Knowledge Seeker",
-      description: "Complete 5 modules in a path",
-      icon: "BookOpen",
-      earned: true,
-      earnedDate: "2025-10-05"
-    },
-    {
-      id: 4,
-      title: "AI Expert",
-      description: "Complete an entire learning path",
-      icon: "Trophy",
-      earned: false,
-      earnedDate: null
-    }
-  ];
-
-  const upcomingMilestones = [
-    {
-      id: 1,
-      title: "Path Completion",
-      description: "Complete AI Fundamentals path",
-      progress: 62.5,
-      target: "3 modules remaining",
-      reward: "500 points + Certificate"
-    },
-    {
-      id: 2,
-      title: "Monthly Goal",
-      description: "Complete 10 modules this month",
-      progress: 80,
-      target: "2 modules remaining",
-      reward: "300 points + Badge"
-    }
-  ];
+const LearningPathProgress = () => {
+  const [paths, setPaths] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [featuredPath, setFeaturedPath] = useState(null);
 
   useEffect(() => {
-    setCurrentPath(learningPaths?.[0]);
-    setAchievements(userAchievements);
-    setMilestones(upcomingMilestones);
+    const fetchPaths = async () => {
+      try {
+        setLoading(true);
+        const response = await learningPathService.getAllLearningPaths();
+        const pathData = response.data.data.learningPaths || [];
+        setPaths(pathData);
+        if (pathData.length > 0) {
+          setFeaturedPath(pathData[0]);
+        }
+      } catch (error) {
+        console.error("Error fetching paths:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchPaths();
   }, []);
-
-  const getProgressPercentage = (completed, total) => {
-    return Math.round((completed / total) * 100);
-  };
 
   const getDifficultyColor = (difficulty) => {
     switch (difficulty?.toLowerCase()) {
-      case 'beginner': return 'text-success bg-success/10';
-      case 'intermediate': return 'text-warning bg-warning/10';
-      case 'advanced': return 'text-error bg-error/10';
+      case 'beginner': return 'text-emerald-500 bg-emerald-500/10';
+      case 'intermediate': return 'text-amber-500 bg-amber-500/10';
+      case 'advanced': return 'text-rose-500 bg-rose-500/10';
       default: return 'text-muted-foreground bg-muted';
     }
   };
 
-  if (!currentPath) return null;
+  if (loading) {
+    return (
+      <div className="bg-[#000000] rounded-[2rem] border border-border/50 p-8 shadow-sm animate-pulse">
+        <div className="h-6 w-1/3 bg-muted rounded mb-4" />
+        <div className="h-4 w-full bg-muted rounded mb-2" />
+        <div className="h-4 w-2/3 bg-muted rounded mb-8" />
+        <div className="h-2 w-full bg-muted rounded-full" />
+      </div>
+    );
+  }
 
-  const progressPercentage = getProgressPercentage(currentPath?.completedModules, currentPath?.totalModules);
+  if (!featuredPath) {
+    return (
+      <div className="bg-[#000000] rounded-[2rem] border border-border/50 p-12 shadow-sm text-center flex flex-col items-center gap-4">
+        <Icon name="Layout" size={48} className="text-muted-foreground opacity-20" />
+        <p className="text-sm font-bold text-muted-foreground uppercase tracking-widest">No Curriculum Published</p>
+      </div>
+    );
+  }
 
   return (
-    <div className="space-y-6">
-      {/* Current Learning Path */}
-      <div className="bg-card rounded-xl border border-border p-6">
-        <div className="flex items-start justify-between mb-4">
-          <div className="flex-1">
-            <h3 className="font-semibold text-lg text-foreground mb-2">
-              {currentPath?.title}
-            </h3>
-            <p className="text-sm text-muted-foreground mb-3">
-              {currentPath?.description}
-            </p>
-            <div className="flex items-center gap-4 text-xs">
-              <span className={`px-2 py-1 rounded-full font-medium ${getDifficultyColor(currentPath?.difficulty)}`}>
-                {currentPath?.difficulty}
-              </span>
-              <div className="flex items-center gap-1 text-muted-foreground">
-                <Icon name="Clock" size={14} />
-                <span>{currentPath?.estimatedTime}</span>
-              </div>
-              <div className="flex items-center gap-1 text-muted-foreground">
-                <Icon name="BookOpen" size={14} />
-                <span>{currentPath?.totalModules} modules</span>
-              </div>
-            </div>
+    <div className="bg-[#000000] rounded-[2rem] border border-border/50 p-8 shadow-sm group hover:border-primary/50 transition-all">
+      <div className="flex items-start justify-between mb-6">
+        <div className="flex-1">
+          <div className="flex items-center gap-2 mb-2">
+            <span className={`px-2 py-0.5 rounded-lg text-[10px] font-black uppercase tracking-tighter ${getDifficultyColor(featuredPath.difficulty)}`}>
+              {featuredPath.difficulty}
+            </span>
+            <span className="text-[10px] font-bold text-muted-foreground uppercase">{featuredPath.categoryRef?.name || 'Technical'}</span>
           </div>
-          <div className="text-right">
-            <div className="text-2xl font-bold text-primary mb-1">
-              {progressPercentage}%
-            </div>
-            <div className="text-xs text-muted-foreground">
-              {currentPath?.completedModules}/{currentPath?.totalModules} completed
-            </div>
-          </div>
-        </div>
-
-        {/* Progress Bar */}
-        <div className="mb-6">
-          <div className="w-full bg-muted rounded-full h-3 overflow-hidden">
-            <div 
-              className="h-full bg-gradient-to-r from-primary to-secondary transition-all duration-500 ease-out"
-              style={{ width: `${progressPercentage}%` }}
-            />
-          </div>
-        </div>
-
-        {/* Module List */}
-        <div className="space-y-2">
-          <h4 className="font-medium text-sm text-foreground mb-3">Module Progress</h4>
-          {currentPath?.modules?.slice(0, 6)?.map((module, index) => (
-            <div key={module.id} className="flex items-center gap-3 p-2 rounded-lg hover:bg-accent/50 transition-colors">
-              <div className={`
-                w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium
-                ${module.completed 
-                  ? 'bg-success text-success-foreground' 
-                  : index === currentPath?.completedModules 
-                    ? 'bg-primary text-primary-foreground animate-pulse'
-                    : 'bg-muted text-muted-foreground'
-                }
-              `}>
-                {module.completed ? (
-                  <Icon name="Check" size={14} />
-                ) : (
-                  <span>{index + 1}</span>
-                )}
-              </div>
-              <div className="flex-1">
-                <div className="text-sm font-medium text-foreground">
-                  {module.title}
-                </div>
-                {module.completed && module.timeSpent > 0 && (
-                  <div className="text-xs text-muted-foreground">
-                    Completed in {module.timeSpent} minutes
-                  </div>
-                )}
-              </div>
-              {index === currentPath?.completedModules && !module.completed && (
-                <div className="text-xs bg-primary/10 text-primary px-2 py-1 rounded-full font-medium">
-                  Next
-                </div>
-              )}
-            </div>
-          ))}
+          <h3 className="font-bold text-xl text-foreground mb-2 group-hover:text-primary transition-colors">
+            {featuredPath.title}
+          </h3>
+          <p className="text-sm text-muted-foreground line-clamp-2 leading-relaxed">
+            {featuredPath.description}
+          </p>
         </div>
       </div>
-      {/* Achievements */}
-      <div className="bg-card rounded-xl border border-border p-6">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="font-semibold text-lg text-foreground">Recent Achievements</h3>
-          <Icon name="Award" size={20} className="text-warning" />
+
+      <div className="grid grid-cols-2 gap-4 mb-8">
+        <div className="flex items-center gap-3 p-3 bg-accent/30 rounded-2xl">
+          <div className="w-8 h-8 rounded-xl bg-primary/10 flex items-center justify-center text-primary text-xs">
+            <Icon name="Clock" size={16} />
+          </div>
+          <div>
+            <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-tight">Duration</p>
+            <p className="text-sm font-black">{featuredPath.estimatedHours}h Total</p>
+          </div>
         </div>
-        <div className="grid grid-cols-2 gap-3">
-          {achievements?.filter(a => a?.earned)?.slice(0, 4)?.map((achievement) => (
-            <div key={achievement?.id} className="flex items-center gap-3 p-3 bg-accent/30 rounded-lg">
-              <div className="w-10 h-10 bg-warning/10 rounded-full flex items-center justify-center">
-                <Icon name={achievement?.icon} size={20} className="text-warning" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="text-sm font-medium text-foreground truncate">
-                  {achievement?.title}
-                </div>
-                <div className="text-xs text-muted-foreground">
-                  {new Date(achievement.earnedDate)?.toLocaleDateString()}
-                </div>
-              </div>
-            </div>
-          ))}
+        <div className="flex items-center gap-3 p-3 bg-accent/30 rounded-2xl">
+          <div className="w-8 h-8 rounded-xl bg-secondary/10 flex items-center justify-center text-secondary text-xs">
+            <Icon name="BookOpen" size={16} />
+          </div>
+          <div>
+            <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-tight">Curriculum</p>
+            <p className="text-sm font-black">{featuredPath.modules?.length || 0} Modules</p>
+          </div>
         </div>
       </div>
-      {/* Upcoming Milestones */}
-      <div className="bg-card rounded-xl border border-border p-6">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="font-semibold text-lg text-foreground">Upcoming Milestones</h3>
-          <Icon name="Target" size={20} className="text-primary" />
+
+      <div className="space-y-4">
+        <div className="flex justify-between items-end">
+          <h4 className="text-xs font-black uppercase tracking-widest text-muted-foreground">Department Adoption</h4>
+          <span className="text-sm font-black text-primary">84%</span>
         </div>
-        <div className="space-y-4">
-          {milestones?.map((milestone) => (
-            <div key={milestone?.id} className="space-y-2">
-              <div className="flex items-center justify-between">
-                <div>
-                  <div className="text-sm font-medium text-foreground">
-                    {milestone?.title}
-                  </div>
-                  <div className="text-xs text-muted-foreground">
-                    {milestone?.description}
-                  </div>
-                </div>
-                <div className="text-right">
-                  <div className="text-sm font-bold text-primary">
-                    {milestone?.progress}%
-                  </div>
-                  <div className="text-xs text-muted-foreground">
-                    {milestone?.target}
-                  </div>
-                </div>
-              </div>
-              <div className="w-full bg-muted rounded-full h-2">
-                <div 
-                  className="h-full bg-gradient-to-r from-primary to-secondary rounded-full transition-all duration-300"
-                  style={{ width: `${milestone?.progress}%` }}
-                />
-              </div>
-              <div className="text-xs text-success font-medium">
-                🎁 {milestone?.reward}
-              </div>
+        <div className="w-full bg-accent rounded-full h-2.5 overflow-hidden">
+          <div 
+            className="h-full bg-gradient-to-r from-primary to-secondary transition-all duration-1000 ease-out"
+            style={{ width: '84%' }}
+          />
+        </div>
+      </div>
+
+      <div className="mt-8 pt-6 border-t border-border/50 flex items-center justify-between">
+        <div className="flex -space-x-2">
+          {[1,2,3,4].map(i => (
+            <div key={i} className="w-8 h-8 rounded-full border-2 border-card bg-muted flex items-center justify-center text-[10px] font-bold shadow-sm">
+              U{i}
             </div>
           ))}
+          <div className="w-8 h-8 rounded-full border-2 border-card bg-primary text-white flex items-center justify-center text-[8px] font-bold shadow-sm">
+            +12
+          </div>
         </div>
+        <button className="text-xs font-black uppercase tracking-widest text-primary hover:translate-x-1 transition-transform flex items-center gap-2">
+          Manage Path <Icon name="ArrowRight" size={14} />
+        </button>
       </div>
     </div>
   );

@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../../../contexts/AuthContext';
 import { MessageSquare } from 'lucide-react';
 import leaderboardService from '../../../../api/leaderboardService';
-import userService from '../../../../api/userService';
 import Icon from '../../../../components/AppIcon';
 
 const getInitials = (name) => {
@@ -40,7 +39,6 @@ const UserAvatar = ({ userData, className = "w-10 h-10" }) => {
 const LeaderboardWidget = ({ userRole = 'employee' }) => {
   const { user } = useAuth();
   const [leaderboardData, setLeaderboardData] = useState([]);
-  const [currentUserData, setCurrentUserData] = useState(null);
   const [timeframe, setTimeframe] = useState('weekly');
   const [isLoading, setIsLoading] = useState(false);
 
@@ -49,7 +47,12 @@ const LeaderboardWidget = ({ userRole = 'employee' }) => {
       setIsLoading(true);
       try {
         const response = await leaderboardService.getLeaderboard(5, timeframe);
-        const data = (response.data || response).map((item, index) => ({
+        const data = (response.data || response)
+          .filter(item => {
+            const role = item.user?.role || item.role;
+            return role !== 'ADMIN';
+          })
+          .map((item, index) => ({
              id: item.id || item.user?.id,
              name: item.name || (item.user ? `${item.user.firstName} ${item.user.lastName}` : 'Unknown User'),
              firstName: item.firstName || item.user?.firstName,
@@ -58,50 +61,13 @@ const LeaderboardWidget = ({ userRole = 'employee' }) => {
              points: item.points || 0,
              modulesCompleted: item.modulesCompleted || 0,
              streak: item.currentStreak || item.user?.currentStreak || 0,
-             rank: item.rank || index + 1,
+             rank: index + 1, // Re-rank after filtering admins
              change: item.rankChange || 0,
              department: item.department || item.user?.department?.name || '',
              isCurrentUser: (item.id || item.user?.id) === user?.id
         }));
         
         setLeaderboardData(data);
-        
-        // Fetch current user summary for high precision stats if we are the user
-        if (user?.id) {
-          try {
-            const summaryResponse = await userService.getUserActivitySummary(user.id);
-            const summary = summaryResponse.data.data;
-            
-            // Find current user's rank in the top list if it exists
-            const inTopList = data.find(u => u.isCurrentUser);
-            
-            setCurrentUserData({
-              id: user.id,
-              name: `${user.firstName} ${user.lastName}`,
-              firstName: user.firstName,
-              lastName: user.lastName,
-              avatar: user.avatar,
-              points: summary.user.totalPoints || 0,
-              modulesCompleted: summary.summary.completedModules || 0,
-              streak: summary.user.currentStreak || 0,
-              rank: inTopList ? inTopList.rank : '-',
-              department: user.department?.name || (typeof user.department === 'string' ? user.department : 'General')
-            });
-          } catch (err) {
-            console.error('Failed to fetch user activity summary', err);
-            // Fallback to basic user data if summary fails
-            setCurrentUserData({
-              id: user.id,
-              name: `${user.firstName} ${user.lastName}`,
-              avatar: user.avatar,
-              points: user.totalPoints || 0,
-              modulesCompleted: user.completedModules || 0,
-              streak: user.currentStreak || 0,
-              rank: '-',
-              department: user.department?.name || 'General'
-            });
-          }
-        }
       } catch (error) {
         console.error('Failed to fetch leaderboard widget data', error);
       } finally {
@@ -114,7 +80,7 @@ const LeaderboardWidget = ({ userRole = 'employee' }) => {
 
   const getRankIcon = (rank) => {
     switch (rank) {
-      case 1: return { icon: 'Crown', color: 'text-yellow-500' };
+      case 1: return { icon: 'Crown', color: 'text-orange-600' };
       case 2: return { icon: 'Medal', color: 'text-gray-400' };
       case 3: return { icon: 'Award', color: 'text-amber-600' };
       default: return { icon: 'User', color: 'text-muted-foreground' };
@@ -129,7 +95,7 @@ const LeaderboardWidget = ({ userRole = 'employee' }) => {
 
   return (
     <div className="space-y-6">
-      <div className="bg-card rounded-xl border border-border p-6 shadow-sm">
+      <div className="bg-[#000000] rounded-xl border border-border p-6 shadow-sm">
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 bg-warning/10 rounded-full flex items-center justify-center">
@@ -145,7 +111,7 @@ const LeaderboardWidget = ({ userRole = 'employee' }) => {
             <button
               onClick={() => setTimeframe('weekly')}
               className={`px-3 py-1 text-xs font-medium rounded-md transition-all ${
-                timeframe === 'weekly' ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
+                timeframe === 'weekly' ? 'bg-primary text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
               }`}
             >
               Week
@@ -246,43 +212,6 @@ const LeaderboardWidget = ({ userRole = 'employee' }) => {
           </button>
         </div>
       </div>
-
-      {currentUserData && (
-        <div className="bg-gradient-to-br from-primary/10 via-card to-secondary/10 rounded-xl border border-primary/30 p-6 shadow-md">
-          <div className="flex items-center gap-4 mb-6">
-            <UserAvatar userData={currentUserData} className="w-14 h-14 ring-4 ring-primary/20 shadow-lg" />
-            <div>
-              <h4 className="font-bold text-foreground text-lg">Your Performance</h4>
-              <div className="flex items-center gap-2 text-sm text-muted-foreground font-medium">
-                <span className="text-primary font-bold">Rank {currentUserData.rank !== '-' ? `#${currentUserData.rank}` : 'Unranked'}</span>
-                <span>•</span>
-                <span>{currentUserData.department}</span>
-              </div>
-            </div>
-          </div>
-          
-          <div className="grid grid-cols-3 gap-2">
-            <div className="bg-card/50 rounded-lg p-3 text-center border border-border/50">
-              <div className="text-xl font-black text-primary mb-0.5">
-                {currentUserData.points.toLocaleString()}
-              </div>
-              <div className="text-[10px] uppercase font-bold text-muted-foreground tracking-tighter">Points</div>
-            </div>
-            <div className="bg-card/50 rounded-lg p-3 text-center border border-border/50">
-              <div className="text-xl font-black text-success mb-0.5">
-                {currentUserData.modulesCompleted}
-              </div>
-              <div className="text-[10px] uppercase font-bold text-muted-foreground tracking-tighter">Modules</div>
-            </div>
-            <div className="bg-card/50 rounded-lg p-3 text-center border border-border/50">
-              <div className="text-xl font-black text-warning mb-0.5">
-                {currentUserData.streak}
-              </div>
-              <div className="text-[10px] uppercase font-bold text-muted-foreground tracking-tighter">Streak</div>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

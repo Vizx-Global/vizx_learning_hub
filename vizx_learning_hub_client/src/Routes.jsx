@@ -51,18 +51,24 @@ const Routes = () => {
             {/* Authenticated User Profile (Public Layout) */}
             <Route element={<ProtectedRoute><UserProfile /></ProtectedRoute>} path="/profile" />
 
-            <Route path="/admin-learning-dashboard" element={<AdminDashboard />} />
-            <Route path="/learning-path-management" element={<LearningPathManagement />} />
-            <Route path="/learning-content-synchronization" element={<LearningContentSynchronization />} />
-            <Route path="/user-profile-management" element={<UserProfileManagement />} />
-            <Route path="/interactive-learning-games-hub" element={<InteractiveLearningGamesHub />} />
-            <Route path="/gamification-leaderboards" element={<GamificationLeaderboards />} />
-            <Route path="/cohort-performance-analytics" element={<PerformanceAnalytics />} />
-            <Route path="/administrative-system-configuration" element={<AdminSystemConfiguration />} />
-            <Route path="/notification-management-center" element={<NotificationManagementCenter />} />
-            <Route path="/content-categories-management" element={<ContentCategoriesManagement />} />
-            <Route path="/department-management" element={<DepartmentManagement />} />
-            <Route path="/admin-chat" element={<ProtectedRoute requiredRole="ADMIN"><AdminChat /></ProtectedRoute>} />
+            {/* Administrator & Managerial Routes */}
+            <Route path="/admin-learning-dashboard" element={<ProtectedRoute requiredRole="MANAGER"><AdminDashboard /></ProtectedRoute>} />
+            <Route path="/cohort-performance-analytics" element={<ProtectedRoute requiredRole="MANAGER"><PerformanceAnalytics /></ProtectedRoute>} />
+            
+            {/* Admin-Only Routes */}
+            <Route path="/learning-path-management" element={<ProtectedRoute requiredRole="ADMIN"><LearningPathManagement /></ProtectedRoute>} />
+            <Route path="/content-categories-management" element={<ProtectedRoute requiredRole="ADMIN"><ContentCategoriesManagement /></ProtectedRoute>} />
+            <Route path="/learning-content-synchronization" element={<ProtectedRoute requiredRole="ADMIN"><LearningContentSynchronization /></ProtectedRoute>} />
+            <Route path="/administrative-system-configuration" element={<ProtectedRoute requiredRole="ADMIN"><AdminSystemConfiguration /></ProtectedRoute>} />
+            <Route path="/notification-management-center" element={<ProtectedRoute requiredRole="ADMIN"><NotificationManagementCenter /></ProtectedRoute>} />
+            
+            {/* Shared Management Routes */}
+            <Route path="/user-profile-management" element={<ProtectedRoute requiredRole="MANAGER"><UserProfileManagement /></ProtectedRoute>} />
+            <Route path="/department-management" element={<ProtectedRoute requiredRole="MANAGER"><DepartmentManagement /></ProtectedRoute>} />
+            <Route path="/interactive-learning-games-hub" element={<ProtectedRoute requiredRole="MANAGER"><InteractiveLearningGamesHub /></ProtectedRoute>} />
+            <Route path="/gamification-leaderboards" element={<ProtectedRoute requiredRole="MANAGER"><GamificationLeaderboards /></ProtectedRoute>} />
+            
+            <Route path="/admin-chat" element={<ProtectedRoute requiredRole="MANAGER"><AdminChat /></ProtectedRoute>} />
             <Route element={
               <ProtectedRoute requiredRole="EMPLOYEE">
                 <EmployeeLayout />

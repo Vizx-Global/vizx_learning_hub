@@ -10,6 +10,8 @@ import achievementService from './achievementService';
 import departmentService from './departmentService';
 import leaderboardService from './leaderboardService';
 import chatService from './chatService';
+import notificationService from './notificationService';
+import socialService from './socialService';
 
 export {
     authService,
@@ -23,5 +25,7 @@ export {
     achievementService,
     departmentService,
     leaderboardService,
-    chatService
+    chatService,
+    notificationService,
+    socialService
 };

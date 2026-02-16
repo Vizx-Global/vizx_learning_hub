@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useCallback } from 'react';
-import { Helmet } from 'react-helmet';
+import { Helmet } from 'react-helmet-async';
 import NavigationSidebar from '../../../components/ui/NavigationSidebar';
 import Icon from '../../../components/AppIcon';
 import Button from '../../../components/ui/Button';

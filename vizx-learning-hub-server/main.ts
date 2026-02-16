@@ -20,6 +20,7 @@ import achievementRoutes from './src/router/achievement.routes';
 import notificationRoutes from './src/router/notification.routes';
 import categoryRoutes from './src/router/category.routes';
 import departmentRoutes from './src/router/department.routes';
+import socialRoutes from './src/router/social.routes';
 
 
 dotenv.config({ path: path.join(__dirname, '.env') });
@@ -83,6 +84,7 @@ app.use('/api/v1/departments', departmentRoutes);
 app.use('/api/v1/chat', require('./src/router/chat.routes').default);
 
 app.use('/api/v1/leaderboard', require('./src/router/leaderboard.routes').default);
+app.use('/api/v1/social', socialRoutes);
 
 app.use((req, res) => res.status(404).json({ success: false, message: `Route ${req.method} ${req.originalUrl} not found` }));
 
