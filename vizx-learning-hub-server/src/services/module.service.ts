@@ -111,12 +111,12 @@ export class ModuleService {
     this.validateContentTypeSpecificFields(data, false);
     const processedData = this.processContentForCreation(data);
     const moduleData: Prisma.ModuleCreateInput = {
-      title: data.title,
-      description: data.description,
-      shortDescription: data.shortDescription,
+      title: data.title.trim(),
+      description: data.description.trim(),
+      shortDescription: data.shortDescription?.trim(),
       orderIndex: data.orderIndex,
       contentType: data.contentType || ContentType.TEXT,
-      category: data.category,
+      category: data.category?.trim(),
       difficulty: data.difficulty || DifficultyLevel.BEGINNER,
       estimatedMinutes: data.estimatedMinutes,
       minEstimatedMinutes: data.minEstimatedMinutes,
@@ -177,12 +177,12 @@ export class ModuleService {
     this.validateUpdateModuleData(data, existingModule);
     const processedData = this.processContentForUpdate(data, existingModule);
     const updateData: Prisma.ModuleUpdateInput = {
-      ...(data.title && { title: data.title }),
-      ...(data.description && { description: data.description }),
-      ...(data.shortDescription !== undefined && { shortDescription: data.shortDescription }),
+      ...(data.title && { title: data.title.trim() }),
+      ...(data.description && { description: data.description.trim() }),
+      ...(data.shortDescription !== undefined && { shortDescription: data.shortDescription?.trim() }),
       ...(data.orderIndex !== undefined && { orderIndex: data.orderIndex }),
       ...(data.contentType && { contentType: data.contentType }),
-      ...(data.category && { category: data.category }),
+      ...(data.category && { category: data.category.trim() }),
       ...(data.difficulty && { difficulty: data.difficulty }),
       ...(data.estimatedMinutes !== undefined && { estimatedMinutes: data.estimatedMinutes }),
       ...(data.minEstimatedMinutes !== undefined && { minEstimatedMinutes: data.minEstimatedMinutes }),

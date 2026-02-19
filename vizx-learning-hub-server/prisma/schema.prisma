@@ -407,6 +407,7 @@ model Module {
   shortDescription      String?             @db.VarChar(500)
   slug                  String              @db.VarChar(200)
   orderIndex            Int                 @default(0)
+  category              String?             @db.VarChar(100)
 
   // Make content properly nullable for non-text content types
   content               String?             @db.LongText 

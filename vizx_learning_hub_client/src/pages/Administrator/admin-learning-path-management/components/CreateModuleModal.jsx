@@ -807,7 +807,7 @@ const CreateModuleModal = ({
         learningPathId: learningPathId,
         title: formData.title.trim(),
         description: formData.description.trim(),
-        category: formData.category,
+        category: formData.category?.trim(),
         estimatedMinutes: parseInt(formData.estimatedMinutes) || 60,
         contentType: contentType,
         difficulty: formData.difficulty,
