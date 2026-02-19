@@ -27,8 +27,11 @@ const normalizeData = (data) => {
 
   const normalized = {};
   for (const [key, value] of Object.entries(data)) {
-    if (typeof value === 'string' && (value.includes('localhost:3000') || value.includes('127.0.0.1:3000'))) {
-      normalized[key] = value.replace(/http:\/\/(localhost|127\.0\.0\.1):3000/, API_BASE_URL);
+    if (typeof value === 'string' && (value.includes('localhost') || value.includes('127.0.0.1'))) {
+      // Robust replacement of localhost:PORT with API_BASE_URL (calculated from VITE_API_BASE_URL)
+      // If the URL contains /uploads/, we want to make sure it points to the root production domain + /uploads
+      const productionDomain = API_BASE_URL.replace(/\/api\/v1\/?$/, '');
+      normalized[key] = value.replace(/http:\/\/(localhost|127\.0\.0\.1)(:\d+)?/, productionDomain);
     } else if (typeof value === 'object' && value !== null) {
       normalized[key] = normalizeData(value);
     } else {

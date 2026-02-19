@@ -39,6 +39,15 @@ export class ChatController {
       }
 
       const conversation = await chatService.createOrGetDirectConversation(user1Id, user2Id);
+      
+      // Emit to participants so they see the new conversation in their list immediately
+      const io = req.app.get('io');
+      if (io) {
+        conversation.participants.forEach((p: any) => {
+          io.to(p.userId).emit('new_conversation', conversation);
+        });
+      }
+
       return res.json({ success: true, data: conversation });
     } catch (error: any) {
       return res.status(500).json({ success: false, message: error.message });
@@ -81,7 +90,15 @@ export class ChatController {
       // Emit to socket room
       const io = req.app.get('io');
       if (io) {
+        // 1. Emit to the conversation room (for those currently looking at the chat)
         io.to(conversationId).emit('new_message', message);
+        
+        // 2. Emit to each participant's personal room (for those who have the chat app open but another conversation selected)
+        const participants = await chatService.getConversationParticipants(conversationId);
+        participants.forEach(p => {
+          // We can also emit to the sender, but usually they handle it via local state or the conversation room
+          io.to(p.userId).emit('new_message', message);
+        });
       }
 
       return res.status(201).json({ success: true, data: message });

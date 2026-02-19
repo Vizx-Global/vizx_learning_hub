@@ -94,6 +94,10 @@ export class AuthService {
         status: true,
         emailVerified: true,
         mustChangePassword: true,
+        totalPoints: true,
+        currentLevel: true,
+        currentStreak: true,
+        longestStreak: true,
       },
     });
 
@@ -188,6 +192,10 @@ export class AuthService {
         status: true,
         emailVerified: true,
         mustChangePassword: true,
+        totalPoints: true,
+        currentLevel: true,
+        currentStreak: true,
+        longestStreak: true,
       },
     });
 
@@ -304,6 +312,10 @@ export class AuthService {
         mustChangePassword: user.mustChangePassword,
         emailVerified: user.emailVerified,
         avatar: user.avatar || undefined,
+        totalPoints: user.totalPoints,
+        currentLevel: user.currentLevel,
+        currentStreak: user.currentStreak,
+        longestStreak: user.longestStreak,
       },
       tokens: { accessToken, refreshToken },
     };

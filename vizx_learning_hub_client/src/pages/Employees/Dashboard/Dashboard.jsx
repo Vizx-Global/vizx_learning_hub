@@ -21,7 +21,7 @@ import UpcomingMilestones from './components/UpcomingMilestones';
 import QuickActions from './components/QuickActions';
 
 export default function Dashboard() {
-  const { user } = useAuth();
+  const { user, checkAuthStatus } = useAuth();
   const { dateRange, setDateRange, activePreset, setFilter } = useFilter();
   const { notifications } = useNotifications();
   const [loading, setLoading] = useState(true);
@@ -41,6 +41,15 @@ export default function Dashboard() {
   useEffect(() => {
     const fetchData = async () => {
       try {
+        // First refresh user profile to get latest gamification data (points, streak, level)
+        try {
+          if (typeof checkAuthStatus === 'function') {
+            await checkAuthStatus();
+          }
+        } catch (err) {
+          console.error("Failed to refresh profile:", err);
+        }
+
         const [progressRes, leaderboardRes, achievementsRes] = await Promise.all([
           moduleProgressService.getUserProgressOverview(),
           leaderboardService.getLeaderboard(5),
@@ -109,10 +118,10 @@ export default function Dashboard() {
   }, [activePreset, dateRange, rawData, achievements]);
 
   const isWithinRange = (dateStr, range, preset) => {
-    if (!dateStr) return false;
     if (preset === 'All Time') return true;
+    if (!dateStr) return false;
     if (!range || !range.from) return true;
-    const date = parseISO(dateStr);
+    const date = typeof dateStr === 'string' ? parseISO(dateStr) : dateStr;
     const start = range.from;
     const end = range.to || new Date();
     return date >= start && date <= end;
@@ -132,7 +141,7 @@ export default function Dashboard() {
     let filteredOverview = overview;
 
     if (activeFilter !== 'All Time') {
-       filteredOverview = overview.filter(item => isWithinRange(item.lastActivityAt, range, activeFilter));
+       filteredOverview = overview.filter(item => isWithinRange(item.lastActivityAt || item.enrolledAt || item.enrolled_at, range, activeFilter));
     }
 
     const completedPaths = filteredOverview.filter(p => p.status === 'COMPLETED').length;

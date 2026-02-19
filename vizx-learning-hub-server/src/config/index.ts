@@ -28,14 +28,23 @@ const getBaseUploadPath = () => {
 };
 
 const getBaseUploadUrl = () => {
+  // 1. Explicit environment variable always wins
   if (process.env.UPLOAD_URL) {
-    return process.env.UPLOAD_URL;
+    return process.env.UPLOAD_URL.replace(/\/$/, ''); // Remove trailing slash if any
   }
   
-  if (process.env.NODE_ENV === 'production') {
+  // 2. Production detection
+  const isProduction = process.env.NODE_ENV === 'production' || 
+                       process.env.NODE_ENV === 'prod' ||
+                       process.env.APP_ENV === 'production';
+
+  if (isProduction) {
     return 'https://academy-api.vizxglobal.com/uploads';
   }
-  return `http://localhost:${process.env.PORT || 3000}/uploads`;
+
+  // 3. Fallback to localhost for development
+  const port = process.env.PORT || 3000;
+  return `http://localhost:${port}/uploads`;
 };
 
 export const config = {

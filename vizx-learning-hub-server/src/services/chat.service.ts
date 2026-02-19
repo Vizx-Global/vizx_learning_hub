@@ -14,7 +14,8 @@ export class ChatService {
       orderBy: { updatedAt: 'desc' },
     });
 
-    return conversations.map(conv => this.formatConversation(conv));
+    // We need to calculate unread counts for EACH conversation for THIS specific user
+    return Promise.all(conversations.map(conv => this.formatConversation(conv, userId)));
   }
 
   async getMessages(conversationId: string, limit = 50, cursor?: string) {
@@ -70,6 +71,13 @@ export class ChatService {
 
     return message;
   }
+  
+  async getConversationParticipants(conversationId: string) {
+    return prisma.participant.findMany({
+      where: { conversationId },
+      select: { userId: true }
+    });
+  }
 
   // Helper with common includes for conversation
   private getConversationInclude() {
@@ -108,40 +116,40 @@ export class ChatService {
     };
   }
 
-  private formatConversation(conv: any) {
+  private async formatConversation(conv: any, userId: string) {
+    const participant = conv.participants.find((p: any) => p.userId === userId);
+    const lastReadAt = participant?.lastReadAt || new Date(0);
+
+    const unreadCount = await prisma.message.count({
+      where: {
+        conversationId: conv.id,
+        senderId: { not: userId },
+        createdAt: { gt: lastReadAt }
+      }
+    });
+
     return {
       ...conv,
-      lastMessage: conv.messages?.[0] || null
+      lastMessage: conv.messages?.[0] || null,
+      unreadCount
     };
   }
 
   async createOrGetDirectConversation(user1Id: string, user2Id: string) {
-    // Check if direct conversation already exists
+    // Check if direct conversation already exists between these two users
     const existingConversation = await prisma.conversation.findFirst({
       where: {
         isGroup: false,
-        participants: {
-          some: { userId: user1Id }
-        }
+        AND: [
+          { participants: { some: { userId: user1Id } } },
+          { participants: { some: { userId: user2Id } } }
+        ]
       },
-      include: {
-        participants: true
-      }
+      include: this.getConversationInclude() as any
     });
 
-    // Double check it's exactly these two
     if (existingConversation) {
-      const allParticipants = await prisma.participant.findMany({
-        where: { conversationId: existingConversation.id }
-      });
-      const ids = allParticipants.map(p => p.userId);
-      if (ids.length === 2 && ids.includes(user1Id) && ids.includes(user2Id)) {
-        const fullConv = await prisma.conversation.findUnique({
-          where: { id: existingConversation.id },
-          include: this.getConversationInclude() as any
-        });
-        return this.formatConversation(fullConv);
-      }
+      return await this.formatConversation(existingConversation, user1Id);
     }
 
     // Create new conversation
@@ -158,7 +166,7 @@ export class ChatService {
       include: this.getConversationInclude() as any,
     });
 
-    return this.formatConversation(newConv);
+    return await this.formatConversation(newConv, user1Id);
   }
 
   async markAsRead(conversationId: string, userId: string) {

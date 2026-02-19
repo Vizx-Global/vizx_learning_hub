@@ -2,6 +2,8 @@ import React, { useState, useRef } from 'react';
 import Icon from '../../../../components/AppIcon';
 import Button from '../../../../components/ui/Button';
 import moduleService from '../services/moduleService';
+import learningPathService from '../services/learningPathService';
+import categoryService from '../../../../api/categoryService';
 import quizService from '../../../../api/quizService';
 import { OrbitProgress } from 'react-loading-indicators';
 import Swal from 'sweetalert2';
@@ -78,6 +80,8 @@ const CreateModuleModal = ({
   const [error, setError] = useState(null);
   const [uploadProgress, setUploadProgress] = useState({});
   const [activeStep, setActiveStep] = useState('basic');
+  const [categories, setCategories] = useState([]);
+  const [isLoadingPath, setIsLoadingPath] = useState(false);
   
   const fileInputRef = useRef(null);
   const thumbnailInputRef = useRef(null);
@@ -87,6 +91,7 @@ const CreateModuleModal = ({
     // Required fields
     title: '',
     description: '',
+    category: '',
     estimatedMinutes: 60,
     
     // Content configuration
@@ -130,6 +135,39 @@ const CreateModuleModal = ({
     quizInstructions: '',
     questions: []
   });
+
+  // Fetch categories and learning path details on mount/open
+  React.useEffect(() => {
+    const fetchData = async () => {
+      if (!isOpen) return;
+      
+      try {
+        // Fetch categories
+        const catRes = await categoryService.getAllCategories();
+        setCategories(catRes.data || []);
+
+        // Fetch learning path to get its category
+        if (learningPathId) {
+          setIsLoadingPath(true);
+          const pathRes = await learningPathService.getLearningPathById(learningPathId);
+          if (pathRes.data?.data) {
+            const pathData = pathRes.data.data;
+            // Use path's category name as default if it exists
+            const pathCategory = pathData.category || pathData.categoryRef?.name || '';
+            if (pathCategory && !formData.category) {
+              setFormData(prev => ({ ...prev, category: pathCategory }));
+            }
+          }
+        }
+      } catch (err) {
+        console.error('Failed to fetch modal data:', err);
+      } finally {
+        setIsLoadingPath(false);
+      }
+    };
+
+    fetchData();
+  }, [isOpen, learningPathId]);
 
   const [tempInputs, setTempInputs] = useState({
     learningObjective: '',
@@ -268,6 +306,10 @@ const CreateModuleModal = ({
         }
         if (!formData.description.trim()) {
           setError('Module description is required');
+          return false;
+        }
+        if (!formData.category.trim()) {
+          setError('Category is required');
           return false;
         }
         return true;
@@ -765,6 +807,7 @@ const CreateModuleModal = ({
         learningPathId: learningPathId,
         title: formData.title.trim(),
         description: formData.description.trim(),
+        category: formData.category,
         estimatedMinutes: parseInt(formData.estimatedMinutes) || 60,
         contentType: contentType,
         difficulty: formData.difficulty,
@@ -941,6 +984,7 @@ const CreateModuleModal = ({
     setFormData({
       title: '',
       description: '',
+      category: '',
       estimatedMinutes: 60,
       contentType: 'TEXT',
       difficulty: 'BEGINNER',
@@ -1079,6 +1123,30 @@ const CreateModuleModal = ({
                       placeholder="Brief description"
                       className="w-full px-4 py-2 bg-muted border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
                     />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-foreground mb-2">
+                      Category <span className="text-error">*</span>
+                    </label>
+                    <div className="relative">
+                      <select
+                        name="category"
+                        value={formData.category}
+                        onChange={handleInputChange}
+                        disabled={isLoadingPath}
+                        className="w-full px-4 py-2 bg-muted border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary appearance-none"
+                      >
+                        <option value="">Select Category</option>
+                        {categories.map(cat => (
+                          <option key={cat.id} value={cat.name}>{cat.name}</option>
+                        ))}
+                      </select>
+                      <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-muted-foreground">
+                        <Icon name="ChevronDown" size={16} />
+                      </div>
+                    </div>
+                    {isLoadingPath && <p className="text-[10px] text-primary mt-1 animate-pulse">Fetching default category...</p>}
                   </div>
                 </div>
 

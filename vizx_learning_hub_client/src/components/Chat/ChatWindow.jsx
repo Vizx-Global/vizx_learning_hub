@@ -220,15 +220,25 @@ const ChatWindow = ({ fullPage = false, externalTriggerNewChat }) => {
         });
       }
     };
-
+    
+    const handleNewConversation = (conversation) => {
+      queryClient.setQueryData(['conversations'], (old = []) => {
+        const conversations = Array.isArray(old) ? old : [];
+        if (conversations.find(c => c.id === conversation.id)) return conversations;
+        return [conversation, ...conversations];
+      });
+    };
+ 
     socket.on('new_message', handleNewMessage);
     socket.on('user_typing', handleTyping);
     socket.on('conversation_deleted', handleConversationDeleted);
+    socket.on('new_conversation', handleNewConversation);
 
     return () => {
       socket.off('new_message');
       socket.off('user_typing');
       socket.off('conversation_deleted', handleConversationDeleted);
+      socket.off('new_conversation', handleNewConversation);
     };
   }, [socket, selectedConversation, user.id, queryClient]);
 

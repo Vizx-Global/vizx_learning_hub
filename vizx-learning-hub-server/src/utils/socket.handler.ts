@@ -49,6 +49,12 @@ export const setupSocket = (io: Server) => {
         // Broadcast to conversation room
         io.to(data.conversationId).emit('new_message', message);
 
+        // Also broadcast to each participant's personal room
+        const participants = await chatService.getConversationParticipants(data.conversationId);
+        participants.forEach(p => {
+          io.to(p.userId).emit('new_message', message);
+        });
+
         // Notify participants who are not in the room (live notification)
         // You might want to filter this based on who is actually "active" in the room
         socket.to(data.conversationId).emit('notification', {

@@ -4,6 +4,7 @@ import Button from '../../../../components/ui/Button';
 import Input from '../../../../components/ui/Input';
 import Select from '../../../../components/ui/Select';
 import { Checkbox } from '../../../../components/ui/Checkbox';
+import categoryService from '../../../../api/categoryService';
 
 const ModuleConfigPanel = ({ selectedModule, onSave, onCancel }) => {
   const [formData, setFormData] = useState({
@@ -27,8 +28,10 @@ const ModuleConfigPanel = ({ selectedModule, onSave, onCancel }) => {
     isOptional: false,
     requiresCompletion: true,
     completionPoints: 100,
-    maxQuizAttempts: 3
+    maxQuizAttempts: 3,
+    category: ''
   });
+  const [categories, setCategories] = useState([]);
   const [activeTab, setActiveTab] = useState('general');
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -53,6 +56,19 @@ const ModuleConfigPanel = ({ selectedModule, onSave, onCancel }) => {
     { value: 'ADVANCED', label: 'Advanced' },
     { value: 'EXPERT', label: 'Expert' }
   ];
+
+  // Fetch categories
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const res = await categoryService.getAllCategories();
+        setCategories(res.data || []);
+      } catch (err) {
+        console.error('Failed to fetch categories:', err);
+      }
+    };
+    fetchCategories();
+  }, []);
 
   // Initialize form data when selectedModule changes
   useEffect(() => {
@@ -81,7 +97,8 @@ const ModuleConfigPanel = ({ selectedModule, onSave, onCancel }) => {
         isOptional: selectedModule.isOptional || false,
         requiresCompletion: selectedModule.requiresCompletion !== false,
         completionPoints: selectedModule.completionPoints || 100,
-        maxQuizAttempts: selectedModule.maxQuizAttempts || 3
+        maxQuizAttempts: selectedModule.maxQuizAttempts || 3,
+        category: selectedModule.category || ''
       });
       setErrors({});
       setSaveStatus('');
@@ -196,6 +213,10 @@ const ModuleConfigPanel = ({ selectedModule, onSave, onCancel }) => {
     
     if (!formData.estimatedMinutes || parseInt(formData.estimatedMinutes) <= 0) {
       newErrors.estimatedMinutes = 'Valid estimated minutes is required';
+    }
+
+    if (!formData.category?.trim()) {
+      newErrors.category = 'Category is required';
     }
 
     // Validate content based on type
@@ -446,6 +467,16 @@ const ModuleConfigPanel = ({ selectedModule, onSave, onCancel }) => {
             </div>
 
             <div className="grid grid-cols-2 gap-4">
+              <Select
+                label="Category *"
+                options={categories.map(cat => ({ value: cat.name, label: cat.name }))}
+                value={formData.category}
+                onChange={(value) => handleInputChange('category', value)}
+                error={errors.category}
+                required
+                disabled={isSaving}
+              />
+              
               <Input
                 label="Estimated Minutes *"
                 type="number"

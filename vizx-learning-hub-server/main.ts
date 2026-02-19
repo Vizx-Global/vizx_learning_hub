@@ -23,7 +23,14 @@ import departmentRoutes from './src/router/department.routes';
 import socialRoutes from './src/router/social.routes';
 
 
-dotenv.config({ path: path.join(__dirname, '.env') });
+// Load environment variables from .env file
+const envPath = fs.existsSync(path.join(__dirname, '.env')) 
+  ? path.join(__dirname, '.env') 
+  : path.join(process.cwd(), '.env');
+
+dotenv.config({ path: envPath });
+console.log(`Loaded environment from: ${envPath}`);
+console.log(`Environment: ${process.env.NODE_ENV}`);
 
 const app = express();
 const prisma = new PrismaClient();
