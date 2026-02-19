@@ -22,7 +22,7 @@ import {
   Lock,
   CheckCircle2
 } from 'lucide-react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useSearchParams } from 'react-router-dom';
 import moduleService from '../../../api/moduleService';
 import learningPathService from '../../../api/learningPathService';
 import enrollmentService from '../../../api/enrollmentService';
@@ -38,7 +38,7 @@ import { parseISO } from 'date-fns';
 
 const MyCourses = () => {
   const { dateRange, activePreset } = useFilter();
-  const location = useLocation();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [modules, setModules] = useState([]);
   const [learningPaths, setLearningPaths] = useState([]);
   const [enrollments, setEnrollments] = useState([]);
@@ -83,7 +83,7 @@ const MyCourses = () => {
       const enrolledPathIds = new Set(enrollData.map(e => e.learningPathId));
       
       const enrichedPaths = pathsData
-        .filter(p => enrolledPathIds.has(p.id))
+        .filter(p => enrolledPathIds.has(p.id) && p.status === 'PUBLISHED')
         .map(path => {
           const enrollment = enrollData.find(e => e.learningPathId === path.id);
           return {
@@ -95,11 +95,6 @@ const MyCourses = () => {
         });
 
       setLearningPaths(enrichedPaths);
-
-      // Initial filter/grouping
-      const initialGrouped = groupModules(modulesData, enrichedPaths, enrollData);
-      setGroupedModules(initialGrouped);
-
       return { modulesData, enrichedPaths };
     } catch (error) {
       console.error('Error fetching data:', error);
@@ -116,6 +111,8 @@ const MyCourses = () => {
 
   const groupModules = (allModules, enrolledPaths, allEnrollments) => {
     const grouped = {};
+    if (!enrolledPaths || !enrolledPaths.length) return grouped;
+    
     enrolledPaths.forEach(path => {
       const enrollment = allEnrollments.find(e => e.learningPathId === path.id);
       const progressMap = new Map();
@@ -146,33 +143,59 @@ const MyCourses = () => {
     return grouped;
   };
 
+  // 1. Initial Data Fetch
   useEffect(() => {
-    const handleNavigationState = async () => {
-      const { modulesData } = await fetchData();
-      
-      const statePathId = location.state?.learningPathId;
-      const stateModuleId = location.state?.moduleId;
+    fetchData();
+  }, []);
 
-      if (stateModuleId) {
-        const target = modulesData.find(m => m.id === stateModuleId);
-        if (target) {
-            setSelectedModule(target);
-            setIsPlayerOpen(true);
-        }
-      } else if (statePathId) {
-        const pathModules = modulesData.filter(m => m.learningPathId === statePathId);
-        if (pathModules.length > 0) {
-           setSelectedModule(pathModules[0]);
-           setIsPlayerOpen(true);
-        }
+  // 2. Handle Navigation State & Persistence
+  useEffect(() => {
+    if (modules.length === 0) return;
+
+    const urlModuleId = searchParams.get('moduleId');
+    const statePathId = location.state?.learningPathId;
+    const stateModuleId = location.state?.moduleId;
+
+    const targetModuleId = urlModuleId || stateModuleId;
+
+    if (targetModuleId) {
+      const target = modules.find(m => m.id === targetModuleId);
+      if (target) {
+        setSelectedModule(target);
+        setIsPlayerOpen(true);
       }
-    };
-    handleNavigationState();
-  }, [location]);
+    } else if (statePathId) {
+      const pathModules = modules.filter(m => m.learningPathId === statePathId);
+      if (pathModules.length > 0) {
+        setSelectedModule(pathModules[0]);
+        setIsPlayerOpen(true);
+      }
+    }
+  }, [modules, searchParams, location.state]);
 
+  // 3. Filtering logic (Separated from fetching)
   useEffect(() => {
+    if (loading) return; 
     filterModules();
-  }, [searchQuery, selectedType, selectedDifficulty, modules, learningPaths, dateRange, activePreset]);
+  }, [searchQuery, selectedType, selectedDifficulty, modules, learningPaths, enrollments, dateRange, activePreset]);
+
+  const handleOpenModule = (module) => {
+    setSelectedModule(module);
+    setIsPlayerOpen(true);
+    setSearchParams({ moduleId: module.id });
+  };
+
+  const handleClosePlayer = () => {
+    setIsPlayerOpen(false);
+    const newParams = new URLSearchParams(searchParams);
+    newParams.delete('moduleId');
+    setSearchParams(newParams);
+  };
+
+  const handleSelectModule = (module) => {
+    setSelectedModule(module);
+    setSearchParams({ moduleId: module.id });
+  };
 
   const filterModules = () => {
     let result = modules;
@@ -358,7 +381,7 @@ const MyCourses = () => {
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between gap-4 mb-2">
-                           <h2 className="text-2xl font-black tracking-tight uppercase text-foreground/90 truncate">{path.title}</h2>
+                           <h2 className="text-2xl font-black tracking-tight text-foreground/90 truncate">{path.title}</h2>
                            <span className="text-[12px] font-black text-primary bg-primary/10 px-3 py-1 rounded-lg shrink-0">{path.completionRate}</span>
                         </div>
                         <div className="flex items-center gap-4">
@@ -440,6 +463,15 @@ const MyCourses = () => {
                                    <div className="p-4 bg-background/80 rounded-full shadow-xl border border-border">
                                       <Lock className="h-6 w-6 text-muted-foreground" />
                                    </div>
+                                 </div>
+                               )}
+
+                              {isModuleComplete && (
+                                <div className="absolute bottom-4 left-4 z-20">
+                                   <div className="flex items-center gap-1.5 px-3 py-1 bg-success/20 text-success backdrop-blur-md rounded-lg text-[9px] font-black uppercase tracking-widest border border-success/30">
+                                      <CheckCircle2 className="h-3 w-3" />
+                                      <span>Completed</span>
+                                   </div>
                                 </div>
                               )}
 
@@ -495,20 +527,17 @@ const MyCourses = () => {
                               <div className="mt-auto flex items-center gap-4">
                                  <Button 
                                    disabled={isLocked}
-                                   onClick={() => {
-                                     setSelectedModule(module);
-                                     setIsPlayerOpen(true);
-                                   }}
+                                   onClick={() => handleOpenModule(module)}
                                    className={cn(
                                      "flex-1 rounded-xl h-12 font-black text-[10px] uppercase tracking-[0.15em] transition-all gap-2",
                                      isLocked ? "bg-muted text-muted-foreground cursor-not-allowed" :
-                                     module.status === 'COMPLETED' 
+                                     isModuleComplete 
                                        ? "bg-success/20 text-success border border-success/30 hover:bg-success/30" 
                                        : "bg-primary text-white hover:shadow-lg hover:shadow-primary/30"
                                    )}
                                  >
-                                    {isLocked ? <Lock className="h-4 w-4" /> : module.status === 'COMPLETED' && <CheckCircle2 className="h-4 w-4" />}
-                                    {isLocked ? 'Locked' : module.status === 'COMPLETED' ? 'Review Module' : 
+                                    {isLocked ? <Lock className="h-4 w-4" /> : isModuleComplete && <CheckCircle2 className="h-4 w-4" />}
+                                    {isLocked ? 'Locked' : isModuleComplete ? 'Redo Module' : 
                                      module.status === 'IN_PROGRESS' ? 'Continue' : 'Start Learning'} 
                                     {!isLocked && <ChevronRight className="h-4 w-4" />}
                                  </Button>
@@ -539,7 +568,7 @@ const MyCourses = () => {
                   You haven't enrolled in any learning paths yet. Explore the discovery page to start your professional journey.
               </p>
               <Button 
-                  onClick={() => window.location.href = '/learning-paths'}
+                  onClick={() => window.location.href = '/employee-learning-paths'}
                   className="mt-10 rounded-2xl h-14 px-10 font-bold uppercase tracking-widest text-[11px]"
               >
                   Explore Learning Paths
@@ -554,8 +583,8 @@ const MyCourses = () => {
           <SideVideoPlayer 
             module={selectedModule}
             allModules={modules}
-            onClose={() => setIsPlayerOpen(false)}
-            onSelectModule={(m) => setSelectedModule(m)}
+            onClose={handleClosePlayer}
+            onSelectModule={handleSelectModule}
           />
         )}
       </AnimatePresence>

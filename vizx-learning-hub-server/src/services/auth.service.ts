@@ -16,7 +16,8 @@ export interface AuthResponse {
     employeeId?: string;
     role: string;
     status: string;
-    department?: string;
+    departmentId?: string;
+    department?: any;
     jobTitle?: string;
     mustChangePassword: boolean;
     emailVerified: boolean;
@@ -86,6 +87,7 @@ export class AuthService {
         lastName: true,
         employeeId: true,
         avatar: true,
+        departmentId: true,
         department: true,
         jobTitle: true,
         role: true,
@@ -294,8 +296,9 @@ export class AuthService {
         firstName: user.firstName,
         lastName: user.lastName,
         employeeId: user.employeeId || undefined,
-        role: user.role,
-        status: user.status,
+        role: user.role as string,
+        status: user.status as string,
+        departmentId: user.departmentId || undefined,
         department: user.department || undefined,
         jobTitle: user.jobTitle || undefined,
         mustChangePassword: user.mustChangePassword,
@@ -326,7 +329,6 @@ export class AuthService {
         password: hashedPassword,
         status: UserStatus.ACTIVE,
         mustChangePassword: true,
-        emailVerified: true,
         emailVerified: true,
         creator: { connect: { id: adminId } },
         department: userData.department ? {
@@ -373,8 +375,6 @@ export class AuthService {
         role: UserRole.EMPLOYEE,
         status: UserStatus.ACTIVE,
         managerId: manager.id,
-        mustChangePassword: true,
-        emailVerified: true,
         mustChangePassword: true,
         emailVerified: true,
         creator: { connect: { id: managerId } },

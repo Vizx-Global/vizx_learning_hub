@@ -154,11 +154,12 @@ export class EnrollmentService {
     return enrollment;
   }
 
-  async getUserEnrollments(userId: string, query: QueryEnrollmentDto) {
-    const { status, learningPathId, page = 1, limit = 10, sortBy = 'enrolledAt', sortOrder = 'desc', includePath, includeProgress } = query;
+  async getUserEnrollments(userId: string, query: any) {
+    const { status, learningPathId, pathStatus, page = 1, limit = 10, sortBy = 'enrolledAt', sortOrder = 'desc', includePath, includeProgress } = query;
     const where: any = { userId };
     if (status) where.status = status;
     if (learningPathId) where.learningPathId = learningPathId;
+    if (pathStatus) where.learningPath = { status: pathStatus };
 
     const skip = (page - 1) * limit;
     const [enrollments, total] = await Promise.all([

@@ -12,11 +12,8 @@ export const useFilter = () => {
 };
 
 export const FilterProvider = ({ children }) => {
-  const [dateRange, setDateRange] = useState({
-    from: startOfMonth(new Date()),
-    to: startOfToday(),
-  });
-  const [activePreset, setActivePreset] = useState('Month'); // 'Today', 'Last Week', 'Month', 'All Time', 'Custom'
+  const [dateRange, setDateRange] = useState(undefined);
+  const [activePreset, setActivePreset] = useState('All Time'); // 'Today', 'Last Week', 'Month', 'All Time', 'Custom'
 
   const setFilter = (preset) => {
     setActivePreset(preset);

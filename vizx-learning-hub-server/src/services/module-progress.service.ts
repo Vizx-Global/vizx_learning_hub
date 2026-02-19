@@ -65,27 +65,45 @@ export class ModuleProgressService {
       }
     }
 
+    const existingProgress = await this.prisma.moduleProgress.findUnique({
+      where: { userId_moduleId_enrollmentId: { userId, moduleId, enrollmentId } }
+    });
+
+    const isFirstTimeCompletion = data.status === ProgressStatus.COMPLETED && (!existingProgress || existingProgress.status !== ProgressStatus.COMPLETED);
+
     const updateData: any = { ...data, lastAccessedAt: new Date() };
     if (data.status === ProgressStatus.IN_PROGRESS) updateData.startedAt = updateData.startedAt || new Date();
+    
     if (data.status === ProgressStatus.COMPLETED) {
-      updateData.completedAt = new Date();
+      updateData.completedAt = existingProgress?.completedAt || new Date();
       updateData.progress = 100;
-      if (module.completionPoints) {
+      
+      if (isFirstTimeCompletion && module.completionPoints) {
         updateData.pointsEarned = module.completionPoints;
         const { GamificationService } = require('./gamification.service');
         const gamificationService = new GamificationService(this.prisma);
         await gamificationService.awardPoints(userId, module.completionPoints, 'MODULE_COMPLETION', moduleId, `Completed: ${module.title}`);
+        
+        await this.prisma.activity.create({
+          data: {
+            userId, type: ActivityType.MODULE_COMPLETED, description: `Completed module: ${module.title}`,
+            metadata: { moduleId, moduleTitle: module.title, enrollmentId, learningPathId: enrollment.learningPathId, learningPathTitle: enrollment.learningPath.title },
+            pointsEarned: updateData.pointsEarned || 0
+          }
+        });
+        
+        // Send notification
+        await NotificationService.notifyModuleCompletion(userId, module.title, module.completionPoints || 0);
+      } else if (data.status === ProgressStatus.COMPLETED && !isFirstTimeCompletion) {
+        // Revision activity (no points)
+         await this.prisma.activity.create({
+          data: {
+            userId, type: ActivityType.MODULE_COMPLETED, description: `Revised module: ${module.title}`,
+            metadata: { moduleId, moduleTitle: module.title, enrollmentId, learningPathId: enrollment.learningPathId, learningPathTitle: enrollment.learningPath.title, isRevision: true },
+            pointsEarned: 0
+          }
+        });
       }
-      await this.prisma.activity.create({
-        data: {
-          userId, type: ActivityType.MODULE_COMPLETED, description: `Completed module: ${module.title}`,
-          metadata: { moduleId, moduleTitle: module.title, enrollmentId, learningPathId: enrollment.learningPathId, learningPathTitle: enrollment.learningPath.title },
-          pointsEarned: updateData.pointsEarned || 0
-        }
-      });
-      
-      // Send notification
-      await NotificationService.notifyModuleCompletion(userId, module.title, module.completionPoints || 0);
     }
 
     const moduleProgress = await this.prisma.moduleProgress.upsert({
@@ -224,9 +242,18 @@ export class ModuleProgressService {
     });
   }
 
-  async getUserProgressOverview(userId: string) {
+  async getUserProgressOverview(userId: string, includeUnpublished: boolean = false) {
+    const where: any = { 
+      userId, 
+      status: { in: [EnrollmentStatus.ENROLLED, EnrollmentStatus.IN_PROGRESS, EnrollmentStatus.COMPLETED] }
+    };
+
+    if (!includeUnpublished) {
+      where.learningPath = { status: 'PUBLISHED' };
+    }
+
     const enrollments = await this.prisma.enrollment.findMany({
-      where: { userId, status: { in: [EnrollmentStatus.ENROLLED, EnrollmentStatus.IN_PROGRESS, EnrollmentStatus.COMPLETED] } },
+      where,
       include: { learningPath: { select: { id: true, title: true, estimatedHours: true, thumbnailUrl: true } }, moduleProgress: { include: { module: { select: { id: true, requiresCompletion: true } } } } }
     });
 

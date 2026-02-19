@@ -70,6 +70,8 @@ export class QuizService {
     const passed = percentage >= quiz.passingScore;
     const score = (percentage / 100) * quiz.pointsAvailable;
 
+    const isInitialAttempt = previousAttempts.length === 0;
+
     const attempt = await QuizRepository.createAttempt({
       user: { connect: { id: userId } },
       quiz: { connect: { id: quizId } },
@@ -84,40 +86,85 @@ export class QuizService {
       completedAt: new Date()
     });
 
+    // Update module progress attempts count and record the INITIAL attempt score
+    await prisma.moduleProgress.upsert({
+      where: { userId_moduleId_enrollmentId: { userId, moduleId: quiz.moduleId, enrollmentId } },
+      update: { 
+        attempts: { increment: 1 },
+        lastAccessedAt: new Date(),
+        ...(isInitialAttempt && { quizScore: score }) // Score for the initial attempt is the final one
+      },
+      create: { 
+        userId, moduleId: quiz.moduleId, enrollmentId, 
+        attempts: 1, 
+        status: ProgressStatus.IN_PROGRESS, 
+        progress: 0,
+        lastAccessedAt: new Date(),
+        quizScore: score // Set score for the first attempt ever
+      }
+    });
+
     const { StreakService } = require('./streak.service');
     const streakService = new StreakService(prisma);
     await streakService.updateStreakImplementation(userId);
 
-    if (passed) await this.handleQuizPassed(userId, quiz, enrollmentId, score);
+    if (passed) await this.handleQuizPassed(userId, quiz, enrollmentId, score, attempt.id, isInitialAttempt);
 
     return attempt;
   }
 
-  private async handleQuizPassed(userId: string, quiz: any, enrollmentId: string, score: number) {
+  private async handleQuizPassed(userId: string, quiz: any, enrollmentId: string, score: number, currentAttemptId: string, isInitialAttempt: boolean = false) {
     const moduleId = quiz.moduleId;
     
-    await prisma.moduleProgress.upsert({
-      where: { userId_moduleId_enrollmentId: { userId, moduleId, enrollmentId } },
-      update: { status: ProgressStatus.COMPLETED, progress: 100, completedAt: new Date(), quizScore: score },
-      create: { userId, moduleId, enrollmentId, status: ProgressStatus.COMPLETED, progress: 100, completedAt: new Date(), quizScore: score }
-    });
-
-    const { GamificationService } = require('./gamification.service');
-    const gamificationService = new GamificationService(prisma);
-    await gamificationService.awardPoints(
-      userId, 
-      Math.round(score), 
-      'QUIZ_COMPLETION', 
-      quiz.id, 
-      `Passed quiz for module: ${quiz.module?.title}`
-    );
-
-    await prisma.activity.create({
-      data: {
-        userId, type: ActivityType.QUIZ_PASSED, description: `Passed quiz for ${quiz.module?.title} with score ${score}`,
-        pointsEarned: Math.round(score),
-        metadata: { quizId: quiz.id, moduleId: quiz.moduleId, score }
+    // Check if the user has already passed this quiz before (excluding the current attempt)
+    const previousPassedAttempt = await prisma.quizAttempt.findFirst({
+      where: { 
+        userId, 
+        quizId: quiz.id, 
+        passed: true, 
+        NOT: { id: currentAttemptId } 
       }
     });
+
+    const isFirstTimePass = !previousPassedAttempt;
+
+    await prisma.moduleProgress.update({
+      where: { userId_moduleId_enrollmentId: { userId, moduleId, enrollmentId } },
+      data: { 
+        status: ProgressStatus.COMPLETED, 
+        progress: 100, 
+        completedAt: new Date()
+        // Note: quizScore is NOT updated here because it was set for the initial attempt in submitAttempt
+      }
+    });
+
+    if (isFirstTimePass && isInitialAttempt) {
+      const { GamificationService } = require('./gamification.service');
+      const gamificationService = new GamificationService(prisma);
+      await gamificationService.awardPoints(
+        userId, 
+        Math.round(score), 
+        'QUIZ_COMPLETION', 
+        quiz.id, 
+        `Passed quiz for module: ${quiz.module?.title}`
+      );
+
+      await prisma.activity.create({
+        data: {
+          userId, type: ActivityType.QUIZ_PASSED, description: `Passed quiz for ${quiz.module?.title} with score ${score}`,
+          pointsEarned: Math.round(score),
+          metadata: { quizId: quiz.id, moduleId: quiz.moduleId, score }
+        }
+      });
+    } else {
+      // Record as a revision/retake without adding points
+      await prisma.activity.create({
+        data: {
+          userId, type: ActivityType.QUIZ_PASSED, description: `Retook and passed quiz for ${quiz.module?.title} with score ${score}`,
+          pointsEarned: 0,
+          metadata: { quizId: quiz.id, moduleId: quiz.moduleId, score, isRevision: true, isInitialAttempt }
+        }
+      });
+    }
   }
 }

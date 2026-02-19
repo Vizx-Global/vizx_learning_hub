@@ -97,7 +97,8 @@ export class ModuleProgressController {
 
   getUserProgressOverview = asyncHandler(async (req: AuthRequest, res: Response) => {
     const userId = req.user!.userId;
-    const overview = await this.moduleProgressService.getUserProgressOverview(userId);
+    const includeUnpublished = req.user?.role === 'ADMIN' || req.user?.role === 'MANAGER' || req.user?.role === 'CONTENT_CREATOR';
+    const overview = await this.moduleProgressService.getUserProgressOverview(userId, includeUnpublished);
 
     return new SuccessResponse(
       'User progress overview retrieved successfully',

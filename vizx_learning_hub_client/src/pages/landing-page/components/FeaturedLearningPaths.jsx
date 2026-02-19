@@ -66,8 +66,10 @@ const FeaturedLearningPaths = () => {
       // Robustly handle paths response structure
       let fetchedPaths = [];
       const pData = pathsResponse.data?.success || pathsResponse.data ? pathsResponse.data : pathsResponse;
-      fetchedPaths = pData?.data?.learningPaths || pData?.data || pData || [];
-      if (!Array.isArray(fetchedPaths)) fetchedPaths = [];
+      const allPaths = pData?.data?.learningPaths || pData?.data || pData || [];
+      if (Array.isArray(allPaths)) {
+        fetchedPaths = allPaths.filter(path => path.status === 'PUBLISHED');
+      }
 
       // Helper to resolve category name
       const getCategoryName = (path) => {

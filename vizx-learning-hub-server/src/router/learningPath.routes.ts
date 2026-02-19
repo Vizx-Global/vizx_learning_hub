@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { LearningPathController } from '../controllers/learningPath.controller';
 import { LearningPathService } from '../services/learningPath.service';
-import { authenticate, authorize } from '../middlewares/auth.middleware';
+import { authenticate, authorize, optionalAuth } from '../middlewares/auth.middleware';
 import { validate } from '../middlewares/validation.middleware';
 import { 
   createLearningPathSchema, 
@@ -13,13 +13,13 @@ const router = Router();
 const learningPathService = new LearningPathService();
 const learningPathController = new LearningPathController(learningPathService);
 
-router.get('/featured', validate(learningPathQuerySchema, 'query'), learningPathController.getFeaturedLearningPaths);
-router.get('/category/:category', validate(learningPathQuerySchema, 'query'), learningPathController.getLearningPathsByCategory);
-router.get('/slug/:slug', learningPathController.getLearningPathBySlug);
+router.get('/featured', optionalAuth, validate(learningPathQuerySchema, 'query'), learningPathController.getFeaturedLearningPaths);
+router.get('/category/:category', optionalAuth, validate(learningPathQuerySchema, 'query'), learningPathController.getLearningPathsByCategory);
+router.get('/slug/:slug', optionalAuth, learningPathController.getLearningPathBySlug);
 
-// Public access to list and details
-router.get('/', validate(learningPathQuerySchema, 'query'), learningPathController.getAllLearningPaths);
-router.get('/:id', learningPathController.getLearningPathById);
+// Public access with optional auth to let admins see drafts
+router.get('/', optionalAuth, validate(learningPathQuerySchema, 'query'), learningPathController.getAllLearningPaths);
+router.get('/:id', optionalAuth, learningPathController.getLearningPathById);
 
 router.use(authenticate);
 

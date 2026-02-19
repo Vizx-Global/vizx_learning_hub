@@ -82,7 +82,7 @@ const Leaderboards = ({ leaderboard, currentUser }) => {
       </div>
 
       <div className="space-y-4 flex-1">
-        {leaderboard?.length > 0 ? leaderboard.map((u, i) => (
+        {leaderboard?.length > 0 ? leaderboard.slice(0, 5).map((u, i) => (
           <LeaderboardRow 
             key={u.id || i}
             user={u}

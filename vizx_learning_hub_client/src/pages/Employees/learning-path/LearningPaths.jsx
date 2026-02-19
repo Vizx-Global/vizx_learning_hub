@@ -40,7 +40,10 @@ const LearningPaths = () => {
       ]);
 
       const pathsData = pathsResponse.data?.data || pathsResponse.data;
-      const paths = Array.isArray(pathsData) ? pathsData : (pathsData?.learningPaths || []);
+      const allPaths = Array.isArray(pathsData) ? pathsData : (pathsData?.learningPaths || []);
+      
+      // Only show published paths to users
+      const paths = allPaths.filter(path => path.status === 'PUBLISHED');
 
       const enrollData = enrollmentsResponse.data?.data || enrollmentsResponse.data;
       const enrollments = Array.isArray(enrollData) ? enrollData : (enrollData?.enrollments || enrollData?.data || []);

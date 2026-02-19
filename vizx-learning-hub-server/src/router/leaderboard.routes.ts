@@ -4,8 +4,6 @@ import { LeaderboardController } from '../controllers/leaderboard.controller';
 import { authenticate } from '../middlewares/auth.middleware';
 
 const router = Router();
-const leaderboardController = new LeaderboardController();
-
-router.get('/', authenticate, leaderboardController.getLeaderboard);
+router.get('/', authenticate, LeaderboardController.getLeaderboard);
 
 export default router;

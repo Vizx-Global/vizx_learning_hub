@@ -66,6 +66,7 @@ export class UserRepository {
     return prisma.user.findUnique({
       where: { email },
       include: {
+        department: true,
         manager: {
           select: {
             id: true,
@@ -82,6 +83,7 @@ export class UserRepository {
     return prisma.user.findUnique({
       where: { id },
       include: {
+        department: true,
         manager: {
           select: {
             id: true,

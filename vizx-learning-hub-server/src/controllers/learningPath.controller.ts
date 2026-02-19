@@ -3,6 +3,7 @@ import { LearningPathService } from '../services/learningPath.service';
 import { AuthRequest } from '../middlewares/auth.middleware';
 import { SuccessResponse } from '../utils/response.util';
 import { asyncHandler } from '../utils/asyncHandler';
+import { NotFoundError } from '../utils/error-handler';
 
 export class LearningPathController {
   private learningPathService: LearningPathService;
@@ -26,6 +27,12 @@ export class LearningPathController {
 
   getAllLearningPaths = asyncHandler(async (req: AuthRequest, res: Response) => {
     const query = req.validatedData || req.query;
+    
+    // Only admins, managers and content creators can see unpublished paths
+    if (req.user?.role !== 'ADMIN' && req.user?.role !== 'MANAGER' && req.user?.role !== 'CONTENT_CREATOR') {
+      query.status = 'PUBLISHED';
+    }
+    
     const result = await this.learningPathService.getAllLearningPaths(query);
 
     new SuccessResponse(
@@ -37,6 +44,16 @@ export class LearningPathController {
   getLearningPathById = asyncHandler(async (req: AuthRequest, res: Response) => {
     const learningPath = await this.learningPathService.getLearningPathById(req.params.id!);
 
+    // Only admins, managers and content creators can see unpublished paths
+    if (
+      req.user?.role !== 'ADMIN' && 
+      req.user?.role !== 'MANAGER' && 
+      req.user?.role !== 'CONTENT_CREATOR' && 
+      learningPath.status !== 'PUBLISHED'
+    ) {
+      throw new NotFoundError('Learning path not found');
+    }
+
     new SuccessResponse(
       'Learning path retrieved successfully',
       learningPath
@@ -45,6 +62,16 @@ export class LearningPathController {
 
   getLearningPathBySlug = asyncHandler(async (req: AuthRequest, res: Response) => {
     const learningPath = await this.learningPathService.getLearningPathBySlug(req.params.slug!);
+
+    // Only admins, managers and content creators can see unpublished paths
+    if (
+      req.user?.role !== 'ADMIN' && 
+      req.user?.role !== 'MANAGER' && 
+      req.user?.role !== 'CONTENT_CREATOR' && 
+      learningPath.status !== 'PUBLISHED'
+    ) {
+      throw new NotFoundError('Learning path not found');
+    }
 
     new SuccessResponse(
       'Learning path retrieved successfully',

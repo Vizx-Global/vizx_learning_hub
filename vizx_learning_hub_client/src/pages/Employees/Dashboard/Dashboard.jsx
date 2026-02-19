@@ -43,7 +43,7 @@ export default function Dashboard() {
       try {
         const [progressRes, leaderboardRes, achievementsRes] = await Promise.all([
           moduleProgressService.getUserProgressOverview(),
-          leaderboardService.getLeaderboard(10),
+          leaderboardService.getLeaderboard(5),
           userService.getUserAchievements(user.id)
         ]);
 

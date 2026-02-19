@@ -184,7 +184,7 @@ const SideVideoPlayer = ({ module, allModules = [], onClose, onSelectModule }) =
             </Button>
             <div className="flex flex-col min-w-0">
               <div className="flex items-center gap-2">
-                <h1 className="text-xs md:text-sm font-black tracking-tight leading-none uppercase truncate">{module.title}</h1>
+                <h1 className="text-xs md:text-sm font-black tracking-tight leading-none truncate">{module.title}</h1>
                 {moduleProgress?.status === 'COMPLETED' && (
                   <div className="flex items-center gap-1 bg-success/20 text-success px-1.5 py-0.5 rounded text-[8px] font-black uppercase tracking-tighter shrink-0 border border-success/30">
                      <CheckCircle2 className="h-2.5 w-2.5" />
@@ -363,7 +363,7 @@ const SideVideoPlayer = ({ module, allModules = [], onClose, onSelectModule }) =
                 >
                   <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
                      <div className="md:col-span-3 space-y-4 md:space-y-6">
-                        <h2 className="text-xl md:text-3xl font-black tracking-tighter text-foreground/90 uppercase">{module.title}</h2>
+                        <h2 className="text-xl md:text-3xl font-black tracking-tighter text-foreground/90">{module.title}</h2>
                         <p className="text-muted-foreground leading-relaxed text-sm md:text-lg font-medium opacity-80">
                           {module.description || "This course delivers a high-impact learning experience focused on mastering practical industry tools. Engage with the content to unlock new cognitive potential and professional mastery."}
                         </p>
@@ -775,7 +775,7 @@ const QuizViewer = ({ quiz, onComplete }) => {
         </div>
 
         <div className="space-y-6 md:space-y-8">
-          <h3 className="text-lg md:text-2xl font-black leading-tight tracking-tighter text-foreground/90 uppercase">
+          <h3 className="text-lg md:text-2xl font-black leading-tight tracking-tighter text-foreground/90">
             {currentQuestion?.text}
           </h3>
 

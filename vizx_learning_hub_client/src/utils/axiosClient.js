@@ -38,6 +38,21 @@ const normalizeData = (data) => {
   return normalized;
 };
 
+let isRefreshing = false;
+let failedQueue = [];
+
+const processQueue = (error, token = null) => {
+  failedQueue.forEach((prom) => {
+    if (error) {
+      prom.reject(error);
+    } else {
+      prom.resolve(token);
+    }
+  });
+
+  failedQueue = [];
+};
+
 axiosClient.interceptors.response.use(
   (response) => {
     if (response.data) {
@@ -47,23 +62,60 @@ axiosClient.interceptors.response.use(
   },
   async (error) => {
     const originalRequest = error.config;
+    
     if (error.response?.status === 401 && !originalRequest._retry) {
+      if (isRefreshing) {
+        return new Promise(function(resolve, reject) {
+          failedQueue.push({ resolve, reject });
+        })
+          .then((token) => {
+            originalRequest.headers.Authorization = `Bearer ${token}`;
+            return axiosClient(originalRequest);
+          })
+          .catch((err) => {
+            return Promise.reject(err);
+          });
+      }
+
       originalRequest._retry = true;
+      isRefreshing = true;
+
       try {
         const response = await axios.post(
           `${API_BASE_URL}${API_VERSION}/auth/refresh-token`,
           {},
           { withCredentials: true, headers: { 'Content-Type': 'application/json' } }
         );
+        
         const { accessToken } = response.data.data;
         localStorage.setItem('accessToken', accessToken);
         originalRequest.headers.Authorization = `Bearer ${accessToken}`;
+        
+        processQueue(null, accessToken);
         return axiosClient(originalRequest);
       } catch (refreshError) {
+        processQueue(refreshError, null);
+        
+        // Clear all session data
         localStorage.removeItem('accessToken');
+        localStorage.removeItem('refreshToken');
         localStorage.removeItem('user');
-        if (window.location.pathname !== '/login') window.location.href = '/login';
+        
+        // Clear cookies
+        const cookies = document.cookie.split(";");
+        for (let i = 0; i < cookies.length; i++) {
+          const cookie = cookies[i];
+          const eqPos = cookie.indexOf("=");
+          const name = eqPos > -1 ? cookie.substr(0, eqPos) : cookie;
+          document.cookie = name + "=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/";
+        }
+
+        if (window.location.pathname !== '/login') {
+          window.location.href = '/login';
+        }
         return Promise.reject(refreshError);
+      } finally {
+        isRefreshing = false;
       }
     }
     return Promise.reject(error);

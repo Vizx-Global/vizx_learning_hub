@@ -21,7 +21,8 @@ const Navigation = () => {
       try {
         const response = await learningPathService.getAllLearningPaths();
         const pathsData = response.data?.data?.learningPaths || response.data?.learningPaths || response.data?.data || [];
-        setLearningPaths(Array.isArray(pathsData) ? pathsData : []);
+        const filteredPaths = (Array.isArray(pathsData) ? pathsData : []).filter(path => path.status === 'PUBLISHED');
+        setLearningPaths(filteredPaths);
       } catch (error) {
         console.error("Failed to fetch learning paths:", error);
       }

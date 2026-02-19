@@ -14,16 +14,16 @@ export class EnrollmentController {
   enrollInPath = async (req: AuthRequest, res: Response) => {
     try {
       const userId = req.user!.userId;
-      const data = validateRequest(enrollmentValidators.createEnrollmentSchema, req.body);
+      const data = validateRequest(enrollmentValidators.createEnrollmentSchema, req.body) as any;
       const enrollment = await this.enrollmentService.enrollUser(userId, data);
 
-      res.status(201).json({
+      return res.status(201).json({
         success: true,
         message: 'Successfully enrolled in learning path',
         data: enrollment
       });
     } catch (error) {
-      this.handleError(error, res);
+      return this.handleError(error, res);
     }
   };
 
@@ -33,19 +33,25 @@ export class EnrollmentController {
       const userId = req.user!.userId;
       const enrollment = await this.enrollmentService.getEnrollmentById(enrollmentId, userId);
 
-      res.json({
+      return res.json({
         success: true,
         data: enrollment
       });
     } catch (error) {
-      this.handleError(error, res);
+      return this.handleError(error, res);
     }
   };
 
   getMyEnrollments = async (req: AuthRequest, res: Response) => {
     try {
       const userId = req.user!.userId;
-      const query = validateRequest(enrollmentValidators.queryEnrollmentSchema, req.query);
+      const query = validateRequest(enrollmentValidators.queryEnrollmentSchema, req.query) as any;
+      
+      // Only admins, managers and content creators can see enrollments in unpublished paths
+      if (req.user?.role !== 'ADMIN' && req.user?.role !== 'MANAGER' && req.user?.role !== 'CONTENT_CREATOR') {
+        query.pathStatus = 'PUBLISHED';
+      }
+      
       const result = await this.enrollmentService.getUserEnrollments(userId, query);
 
       res.json({
@@ -142,7 +148,7 @@ export class EnrollmentController {
       });
     }
 
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       message: 'Internal server error'
     });

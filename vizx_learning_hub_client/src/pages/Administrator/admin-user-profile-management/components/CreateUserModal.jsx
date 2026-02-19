@@ -33,35 +33,19 @@ const CreateUserModal = ({ isOpen, onClose, onSuccess }) => {
     { value: 'ADMIN', label: 'Administrator', description: 'Full system access and configuration' }
   ];
 
-  // Default departments and job titles since API endpoints don't exist
-  const defaultDepartments = [
-    'Engineering',
-    'Product',
-    'Marketing',
-    'Sales',
-    'HR',
-    'Finance',
-    'Operations',
-    'IT',
-    'Customer Success',
-    'Design',
-    'Research',
-    'Legal'
-  ];
-
   const defaultJobTitles = [
-    'Software Engineer',
-    'Senior Software Engineer',
-    'Frontend Developer',
-    'Backend Developer',
-    'Full Stack Developer',
-    'DevOps Engineer',
-    'QA Engineer',
-    'Engineering Manager',
-    'Product Manager',
-    'Product Designer',
-    'UX Researcher',
-    'Product Owner',
+    'BPO Associate',
+    'Head of Research & Development',
+    'HR Manager',
+    'Web Developer',
+    'Executive Assistant',
+    'Real Estate Specialist',
+    'Communication and Lead Sourcing Specialist',
+    'Head of Operations',
+    'Office Assistant',
+    'Recruiter',
+    'BPO Executive',
+    'Sales Executive',
     'Marketing Manager',
     'Content Strategist',
     'SEO Specialist',
